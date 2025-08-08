@@ -3698,15 +3698,6 @@
         `;
         document.head.appendChild(style);
         
-        // Update the existing updateInfoPanel to track history and progress
-        const originalUpdateInfoPanel = updateInfoPanel;
-        updateInfoPanel = function(data) {
-            currentNodeData = data;
-            addToHistory(data);
-            trackNodeVisit(data);
-            originalUpdateInfoPanel(data);
-        };
-        
         // Make checkChallenge global
         window.checkChallenge = checkChallenge;
         
