@@ -1,0 +1,795 @@
+{
+  "id": "services",
+  "name": "System Services",
+  "type": "service",
+  "level": "intermediate",
+  "metadata": {
+    "path": "/lib/systemd/system/",
+    "description": "Background processes and daemons providing system functionality. Modern Linux uses systemd as the init system.",
+    "created_by": "Lennart Poettering (systemd)",
+    "managed_by": "systemd maintainers"
+  },
+  "connections": {
+    "reads_from": ["/etc/systemd/", "/lib/systemd/", "D-Bus"],
+    "writes_to": ["/var/log/journal/", "/run/systemd/", "cgroups"],
+    "controls": ["processes", "mounts", "timers", "sockets"],
+    "controlled_by": ["systemctl", "journalctl", "kernel"]
+  },
+  "operations": {
+    "commands": [
+      {"cmd": "systemctl status", "description": "System overview"},
+      {"cmd": "systemctl list-units --failed", "description": "Show failed units"},
+      {"cmd": "systemctl daemon-reload", "description": "Reload unit files", "requires": "root"},
+      {"cmd": "systemd-analyze blame", "description": "Boot time analysis"}
+    ],
+    "system_calls": ["fork", "exec", "socket", "mount"],
+    "config_files": [
+      {"path": "/etc/systemd/system.conf", "format": "ini", "editable": true},
+      {"path": "/etc/systemd/journald.conf", "format": "ini", "editable": true}
+    ]
+  },
+  "cs_concepts": {
+    "category": ["Operating Systems", "System Design"],
+    "topics": ["Init systems", "Service management", "Dependency resolution", "Process supervision"],
+    "difficulty": "intermediate"
+  },
+  "performance": {
+    "metrics": {
+      "boot_time": "Parallel service startup",
+      "resource_usage": "cgroup-based limits",
+      "logging": "Binary journal with indexing"
+    }
+  },
+  "children": [
+    {
+      "id": "systemd_init",
+      "name": "systemd (PID 1)",
+      "type": "service",
+      "level": "intermediate",
+      "metadata": {
+        "description": "System and service manager - the first process started by kernel, manages entire system.",
+        "path": "/lib/systemd/systemd",
+        "created_by": "Lennart Poettering, Kay Sievers",
+        "managed_by": "Red Hat, systemd team"
+      },
+      "connections": {
+        "reads_from": ["unit_files", "kernel_cmdline"],
+        "writes_to": ["cgroups", "journal", "/run/systemd/"],
+        "controls": ["all_services", "mounts", "devices"],
+        "controlled_by": ["kernel", "systemctl"]
+      },
+      "operations": {
+        "commands": [
+          {"cmd": "systemctl get-default", "description": "Show default target"},
+          {"cmd": "systemctl isolate rescue.target", "description": "Enter rescue mode", "requires": "root"},
+          {"cmd": "systemctl list-dependencies", "description": "Show unit dependencies"},
+          {"cmd": "systemctl show --property=Names", "description": "Show unit properties"}
+        ]
+      },
+      "cs_concepts": {
+        "category": ["Operating Systems"],
+        "topics": ["Init process", "Process hierarchy", "Service dependencies", "State machines"],
+        "difficulty": "intermediate"
+      },
+      "children": [
+        {
+          "id": "systemd_units",
+          "name": "Unit Types",
+          "type": "service",
+          "level": "intermediate",
+          "metadata": {
+            "description": "Different types of systemd units for various system resources.",
+            "path": "/lib/systemd/system/*.{service,socket,timer,mount,target}"
+          },
+          "children": [
+            {
+              "id": "service_units",
+              "name": "Service Units",
+              "type": "service",
+              "level": "intermediate",
+              "metadata": {
+                "description": "Daemons and processes managed by systemd (.service files).",
+                "path": "*.service"
+              },
+              "operations": {
+                "commands": [
+                  {"cmd": "systemctl start nginx.service", "description": "Start service", "requires": "root"},
+                  {"cmd": "systemctl enable --now sshd", "description": "Enable and start", "requires": "root"},
+                  {"cmd": "systemctl cat sshd.service", "description": "View unit file"}
+                ]
+              },
+              "examples": [
+                {
+                  "title": "Simple service unit",
+                  "code": "[Unit]\nDescription=My Service\nAfter=network.target\n\n[Service]\nType=simple\nExecStart=/usr/bin/myapp\nRestart=always\n\n[Install]\nWantedBy=multi-user.target",
+                  "explanation": "Basic systemd service configuration"
+                }
+              ]
+            },
+            {
+              "id": "socket_units",
+              "name": "Socket Units",
+              "type": "service",
+              "level": "advanced",
+              "metadata": {
+                "description": "Socket-activated services for on-demand startup (.socket files).",
+                "path": "*.socket"
+              },
+              "cs_concepts": {
+                "category": ["Operating Systems"],
+                "topics": ["Socket activation", "Lazy loading", "IPC"],
+                "difficulty": "advanced"
+              }
+            },
+            {
+              "id": "timer_units",
+              "name": "Timer Units",
+              "type": "service",
+              "level": "intermediate",
+              "metadata": {
+                "description": "Scheduled tasks replacement for cron (.timer files).",
+                "path": "*.timer"
+              },
+              "operations": {
+                "commands": [
+                  {"cmd": "systemctl list-timers", "description": "Show all timers"},
+                  {"cmd": "systemctl status systemd-tmpfiles-clean.timer", "description": "Check timer status"}
+                ]
+              }
+            },
+            {
+              "id": "mount_units",
+              "name": "Mount Units",
+              "type": "service",
+              "level": "intermediate",
+              "metadata": {
+                "description": "Filesystem mount points managed by systemd (.mount files).",
+                "path": "*.mount"
+              },
+              "operations": {
+                "commands": [
+                  {"cmd": "systemctl list-units --type=mount", "description": "List mount units"},
+                  {"cmd": "systemctl daemon-reload", "description": "Reload after fstab change", "requires": "root"}
+                ]
+              }
+            },
+            {
+              "id": "target_units",
+              "name": "Target Units",
+              "type": "service",
+              "level": "intermediate",
+              "metadata": {
+                "description": "Grouping mechanism for units, similar to runlevels (.target files).",
+                "path": "*.target"
+              },
+              "examples": [
+                {
+                  "title": "Common targets",
+                  "code": "multi-user.target (normal operation)\ngraphical.target (with GUI)\nrescue.target (single user)\nemergency.target (minimal)",
+                  "explanation": "System states/runlevels"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "systemd_boot_process",
+          "name": "Boot Process",
+          "type": "service",
+          "level": "intermediate",
+          "metadata": {
+            "description": "systemd boot sequence from kernel handoff to target reached.",
+            "path": "/lib/systemd/system/basic.target"
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "systemd-analyze", "description": "Boot time summary"},
+              {"cmd": "systemd-analyze critical-chain", "description": "Critical boot path"},
+              {"cmd": "systemd-analyze plot > boot.svg", "description": "Boot timeline graph"}
+            ]
+          },
+          "cs_concepts": {
+            "category": ["Operating Systems"],
+            "topics": ["Boot process", "Parallel initialization", "Dependency graphs"],
+            "difficulty": "intermediate"
+          }
+        },
+        {
+          "id": "systemd_journal",
+          "name": "systemd-journald",
+          "type": "service",
+          "level": "intermediate",
+          "metadata": {
+            "description": "Structured logging system collecting messages from kernel, services, and applications.",
+            "path": "/lib/systemd/systemd-journald"
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "journalctl -xe", "description": "Recent logs with explanation"},
+              {"cmd": "journalctl -u sshd --since today", "description": "Service logs since today"},
+              {"cmd": "journalctl -b -1", "description": "Previous boot logs"},
+              {"cmd": "journalctl --disk-usage", "description": "Journal disk usage"}
+            ]
+          },
+          "performance": {
+            "metrics": {
+              "indexing": "Binary format with indexes",
+              "rotation": "Automatic size/time based",
+              "compression": "Optional XZ compression"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "cron_service",
+      "name": "Cron Daemon",
+      "type": "service",
+      "level": "beginner",
+      "metadata": {
+        "description": "Time-based job scheduler for periodic command execution.",
+        "path": "/usr/sbin/cron",
+        "created_by": "Ken Thompson (original AT&T UNIX)",
+        "managed_by": "Distribution maintainers"
+      },
+      "operations": {
+        "commands": [
+          {"cmd": "crontab -e", "description": "Edit user crontab"},
+          {"cmd": "crontab -l", "description": "List cron jobs"},
+          {"cmd": "systemctl status cron", "description": "Check cron service"},
+          {"cmd": "cat /var/log/cron.log", "description": "View cron logs"}
+        ],
+        "config_files": [
+          {"path": "/etc/crontab", "format": "crontab", "editable": true},
+          {"path": "/etc/cron.d/", "format": "crontab", "editable": true},
+          {"path": "/var/spool/cron/crontabs/", "format": "crontab", "editable": true}
+        ]
+      },
+      "examples": [
+        {
+          "title": "Cron time format",
+          "code": "# m h dom mon dow command\n0 2 * * * /backup.sh        # Daily at 2 AM\n*/5 * * * * /monitor.sh     # Every 5 minutes\n0 0 * * 0 /weekly.sh        # Weekly on Sunday",
+          "explanation": "minute hour day-of-month month day-of-week"
+        }
+      ],
+      "children": [
+        {
+          "id": "anacron",
+          "name": "Anacron",
+          "type": "service",
+          "level": "intermediate",
+          "metadata": {
+            "description": "Runs periodic commands even if system was powered off.",
+            "path": "/usr/sbin/anacron"
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "anacron -T", "description": "Test anacrontab"},
+              {"cmd": "cat /etc/anacrontab", "description": "View anacron jobs"}
+            ]
+          }
+        },
+        {
+          "id": "at_daemon",
+          "name": "at/atd",
+          "type": "service",
+          "level": "beginner",
+          "metadata": {
+            "description": "One-time task scheduling.",
+            "path": "/usr/sbin/atd"
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "at now + 1 hour", "description": "Schedule in 1 hour"},
+              {"cmd": "atq", "description": "List queued jobs"},
+              {"cmd": "atrm job_number", "description": "Remove scheduled job"}
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "ssh_service",
+      "name": "SSH Server (sshd)",
+      "type": "service",
+      "level": "intermediate",
+      "metadata": {
+        "description": "OpenSSH server daemon providing secure remote access.",
+        "path": "/usr/sbin/sshd",
+        "created_by": "OpenBSD team",
+        "managed_by": "OpenSSH maintainers"
+      },
+      "operations": {
+        "commands": [
+          {"cmd": "systemctl status sshd", "description": "Check SSH status"},
+          {"cmd": "sshd -t", "description": "Test configuration", "requires": "root"},
+          {"cmd": "ssh-keygen -A", "description": "Generate host keys", "requires": "root"},
+          {"cmd": "fail2ban-client status sshd", "description": "Check SSH bans"}
+        ],
+        "config_files": [
+          {"path": "/etc/ssh/sshd_config", "format": "ssh_config", "editable": true},
+          {"path": "/etc/ssh/ssh_host_*_key", "format": "binary", "editable": false}
+        ]
+      },
+      "cs_concepts": {
+        "category": ["Security", "Networking"],
+        "topics": ["Public key cryptography", "Secure channels", "Authentication"],
+        "difficulty": "intermediate"
+      },
+      "children": [
+        {
+          "id": "ssh_authentication",
+          "name": "Authentication Methods",
+          "type": "service",
+          "level": "intermediate",
+          "metadata": {
+            "description": "Password, public key, and other authentication mechanisms."
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "ssh-keygen -t ed25519", "description": "Generate SSH key pair"},
+              {"cmd": "ssh-copy-id user@host", "description": "Copy public key to server"},
+              {"cmd": "ssh-add -l", "description": "List keys in agent"}
+            ]
+          }
+        },
+        {
+          "id": "ssh_agent",
+          "name": "SSH Agent",
+          "type": "service",
+          "level": "intermediate",
+          "metadata": {
+            "description": "Holds private keys for password-less authentication.",
+            "path": "/usr/bin/ssh-agent"
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "eval $(ssh-agent)", "description": "Start SSH agent"},
+              {"cmd": "ssh-add ~/.ssh/id_ed25519", "description": "Add key to agent"}
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "network_services",
+      "name": "Network Services",
+      "type": "service",
+      "level": "intermediate",
+      "metadata": {
+        "description": "Services managing network configuration and connectivity."
+      },
+      "children": [
+        {
+          "id": "networkmanager",
+          "name": "NetworkManager",
+          "type": "service",
+          "level": "intermediate",
+          "metadata": {
+            "description": "Dynamic network configuration and management daemon.",
+            "path": "/usr/sbin/NetworkManager"
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "nmcli device status", "description": "Show network devices"},
+              {"cmd": "nmcli connection show", "description": "List connections"},
+              {"cmd": "nmtui", "description": "Text UI for network config"}
+            ]
+          }
+        },
+        {
+          "id": "systemd_networkd",
+          "name": "systemd-networkd",
+          "type": "service",
+          "level": "intermediate",
+          "metadata": {
+            "description": "systemd network configuration daemon.",
+            "path": "/lib/systemd/systemd-networkd"
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "networkctl list", "description": "List network links"},
+              {"cmd": "networkctl status", "description": "Network status"}
+            ],
+            "config_files": [
+              {"path": "/etc/systemd/network/*.network", "format": "ini", "editable": true}
+            ]
+          }
+        },
+        {
+          "id": "systemd_resolved",
+          "name": "systemd-resolved",
+          "type": "service",
+          "level": "intermediate",
+          "metadata": {
+            "description": "DNS resolver daemon with caching and DNSSEC.",
+            "path": "/lib/systemd/systemd-resolved"
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "resolvectl status", "description": "DNS resolver status"},
+              {"cmd": "resolvectl query google.com", "description": "DNS query"},
+              {"cmd": "resolvectl flush-caches", "description": "Flush DNS cache"}
+            ]
+          }
+        },
+        {
+          "id": "dhcp_client",
+          "name": "DHCP Client",
+          "type": "service",
+          "level": "beginner",
+          "metadata": {
+            "description": "Dynamic Host Configuration Protocol client for automatic IP configuration.",
+            "path": "/sbin/dhclient"
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "dhclient -v eth0", "description": "Request DHCP lease"},
+              {"cmd": "cat /var/lib/dhcp/dhclient.leases", "description": "View DHCP leases"}
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "logging_services",
+      "name": "Logging Services",
+      "type": "service",
+      "level": "intermediate",
+      "metadata": {
+        "description": "System and application logging daemons."
+      },
+      "children": [
+        {
+          "id": "rsyslog",
+          "name": "rsyslog",
+          "type": "service",
+          "level": "intermediate",
+          "metadata": {
+            "description": "Reliable system logging daemon with advanced filtering.",
+            "path": "/usr/sbin/rsyslogd"
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "logger 'Test message'", "description": "Send message to syslog"},
+              {"cmd": "rsyslogd -N1", "description": "Check config syntax"}
+            ],
+            "config_files": [
+              {"path": "/etc/rsyslog.conf", "format": "rsyslog", "editable": true},
+              {"path": "/etc/rsyslog.d/*.conf", "format": "rsyslog", "editable": true}
+            ]
+          }
+        },
+        {
+          "id": "logrotate",
+          "name": "logrotate",
+          "type": "service",
+          "level": "beginner",
+          "metadata": {
+            "description": "Automatic log file rotation, compression, and removal.",
+            "path": "/usr/sbin/logrotate"
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "logrotate -f /etc/logrotate.conf", "description": "Force rotation", "requires": "root"},
+              {"cmd": "logrotate -d /etc/logrotate.conf", "description": "Debug/dry run"}
+            ]
+          }
+        },
+        {
+          "id": "auditd",
+          "name": "auditd",
+          "type": "service",
+          "level": "advanced",
+          "metadata": {
+            "description": "Linux Audit daemon for security event logging.",
+            "path": "/sbin/auditd"
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "auditctl -l", "description": "List audit rules"},
+              {"cmd": "ausearch -m LOGIN", "description": "Search login events"},
+              {"cmd": "aureport --summary", "description": "Audit report summary"}
+            ]
+          },
+          "cs_concepts": {
+            "category": ["Security"],
+            "topics": ["Security auditing", "Compliance", "Event tracking"],
+            "difficulty": "advanced"
+          }
+        }
+      ]
+    },
+    {
+      "id": "package_managers",
+      "name": "Package Management",
+      "type": "service",
+      "level": "beginner",
+      "metadata": {
+        "description": "Software package installation and management services."
+      },
+      "children": [
+        {
+          "id": "apt",
+          "name": "APT (Debian/Ubuntu)",
+          "type": "service",
+          "level": "beginner",
+          "metadata": {
+            "description": "Advanced Package Tool for Debian-based distributions.",
+            "path": "/usr/bin/apt"
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "apt update", "description": "Update package list", "requires": "root"},
+              {"cmd": "apt upgrade", "description": "Upgrade packages", "requires": "root"},
+              {"cmd": "apt search keyword", "description": "Search packages"},
+              {"cmd": "apt show package", "description": "Package information"}
+            ],
+            "config_files": [
+              {"path": "/etc/apt/sources.list", "format": "sources.list", "editable": true}
+            ]
+          }
+        },
+        {
+          "id": "yum_dnf",
+          "name": "YUM/DNF (RHEL/Fedora)",
+          "type": "service",
+          "level": "beginner",
+          "metadata": {
+            "description": "Yellowdog Updater Modified / Dandified YUM.",
+            "path": "/usr/bin/dnf"
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "dnf update", "description": "Update packages", "requires": "root"},
+              {"cmd": "dnf search keyword", "description": "Search packages"},
+              {"cmd": "dnf history", "description": "Transaction history"}
+            ]
+          }
+        },
+        {
+          "id": "snap",
+          "name": "Snap",
+          "type": "service",
+          "level": "intermediate",
+          "metadata": {
+            "description": "Universal package management with sandboxing.",
+            "path": "/usr/bin/snap"
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "snap list", "description": "List installed snaps"},
+              {"cmd": "snap install package", "description": "Install snap package"},
+              {"cmd": "snap refresh", "description": "Update all snaps"}
+            ]
+          }
+        },
+        {
+          "id": "flatpak",
+          "name": "Flatpak",
+          "type": "service",
+          "level": "intermediate",
+          "metadata": {
+            "description": "Application sandboxing and distribution framework.",
+            "path": "/usr/bin/flatpak"
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "flatpak list", "description": "List installed apps"},
+              {"cmd": "flatpak remote-ls", "description": "List available apps"}
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "container_services",
+      "name": "Container Services",
+      "type": "service",
+      "level": "intermediate",
+      "metadata": {
+        "description": "Container runtime and orchestration services."
+      },
+      "children": [
+        {
+          "id": "docker",
+          "name": "Docker",
+          "type": "service",
+          "level": "intermediate",
+          "metadata": {
+            "description": "Container runtime daemon for application containerization.",
+            "path": "/usr/bin/dockerd"
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "docker ps", "description": "List running containers"},
+              {"cmd": "docker images", "description": "List images"},
+              {"cmd": "docker system prune", "description": "Clean unused resources"}
+            ]
+          },
+          "cs_concepts": {
+            "category": ["Virtualization", "Operating Systems"],
+            "topics": ["Containerization", "Namespaces", "cgroups", "Union filesystems"],
+            "difficulty": "intermediate"
+          }
+        },
+        {
+          "id": "containerd",
+          "name": "containerd",
+          "type": "service",
+          "level": "advanced",
+          "metadata": {
+            "description": "Industry-standard container runtime.",
+            "path": "/usr/bin/containerd"
+          }
+        },
+        {
+          "id": "podman",
+          "name": "Podman",
+          "type": "service",
+          "level": "intermediate",
+          "metadata": {
+            "description": "Daemonless container engine.",
+            "path": "/usr/bin/podman"
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "podman ps", "description": "List containers"},
+              {"cmd": "podman run --rm -it alpine", "description": "Run container"}
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "database_services",
+      "name": "Database Services",
+      "type": "service",
+      "level": "intermediate",
+      "metadata": {
+        "description": "Database management system services."
+      },
+      "children": [
+        {
+          "id": "mysql_mariadb",
+          "name": "MySQL/MariaDB",
+          "type": "service",
+          "level": "intermediate",
+          "metadata": {
+            "description": "Relational database management system.",
+            "path": "/usr/sbin/mysqld"
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "systemctl status mysql", "description": "Check MySQL status"},
+              {"cmd": "mysql -u root -p", "description": "Connect to MySQL"},
+              {"cmd": "mysqldump database", "description": "Backup database"}
+            ]
+          }
+        },
+        {
+          "id": "postgresql",
+          "name": "PostgreSQL",
+          "type": "service",
+          "level": "intermediate",
+          "metadata": {
+            "description": "Advanced open-source relational database.",
+            "path": "/usr/lib/postgresql/*/bin/postgres"
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "systemctl status postgresql", "description": "Check PostgreSQL status"},
+              {"cmd": "sudo -u postgres psql", "description": "Connect as postgres user"}
+            ]
+          }
+        },
+        {
+          "id": "redis",
+          "name": "Redis",
+          "type": "service",
+          "level": "intermediate",
+          "metadata": {
+            "description": "In-memory data structure store.",
+            "path": "/usr/bin/redis-server"
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "redis-cli ping", "description": "Test Redis connection"},
+              {"cmd": "redis-cli INFO", "description": "Redis server information"}
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "web_services",
+      "name": "Web Services",
+      "type": "service",
+      "level": "intermediate",
+      "metadata": {
+        "description": "Web servers and reverse proxies."
+      },
+      "children": [
+        {
+          "id": "nginx",
+          "name": "NGINX",
+          "type": "service",
+          "level": "intermediate",
+          "metadata": {
+            "description": "High-performance web server and reverse proxy.",
+            "path": "/usr/sbin/nginx"
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "nginx -t", "description": "Test configuration", "requires": "root"},
+              {"cmd": "nginx -s reload", "description": "Reload config", "requires": "root"},
+              {"cmd": "nginx -V", "description": "Version and modules"}
+            ],
+            "config_files": [
+              {"path": "/etc/nginx/nginx.conf", "format": "nginx", "editable": true},
+              {"path": "/etc/nginx/sites-available/", "format": "nginx", "editable": true}
+            ]
+          }
+        },
+        {
+          "id": "apache",
+          "name": "Apache HTTP Server",
+          "type": "service",
+          "level": "intermediate",
+          "metadata": {
+            "description": "The world's most used web server software.",
+            "path": "/usr/sbin/apache2"
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "apache2ctl configtest", "description": "Test configuration"},
+              {"cmd": "a2enmod rewrite", "description": "Enable module", "requires": "root"},
+              {"cmd": "a2ensite site.conf", "description": "Enable site", "requires": "root"}
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "monitoring_services",
+      "name": "Monitoring Services",
+      "type": "service",
+      "level": "intermediate",
+      "metadata": {
+        "description": "System monitoring and alerting services."
+      },
+      "children": [
+        {
+          "id": "prometheus_node_exporter",
+          "name": "Node Exporter",
+          "type": "service",
+          "level": "intermediate",
+          "metadata": {
+            "description": "Prometheus exporter for hardware and OS metrics.",
+            "path": "/usr/bin/node_exporter"
+          }
+        },
+        {
+          "id": "collectd",
+          "name": "collectd",
+          "type": "service",
+          "level": "intermediate",
+          "metadata": {
+            "description": "System statistics collection daemon.",
+            "path": "/usr/sbin/collectd"
+          }
+        },
+        {
+          "id": "nagios_nrpe",
+          "name": "NRPE",
+          "type": "service",
+          "level": "intermediate",
+          "metadata": {
+            "description": "Nagios Remote Plugin Executor.",
+            "path": "/usr/sbin/nrpe"
+          }
+        }
+      ]
+    }
+  ]
+}

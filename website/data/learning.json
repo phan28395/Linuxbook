@@ -1,0 +1,230 @@
+{
+  "paths": [
+    {
+      "id": "beginner",
+      "name": "Linux Fundamentals",
+      "description": "Start your Linux journey with basic concepts and commands",
+      "icon": "🌱",
+      "modules": [
+        {
+          "id": "filesystem-basics",
+          "name": "Filesystem Navigation",
+          "nodes": ["/", "/home", "/etc", "/bin", "/usr"],
+          "objectives": [
+            "Understand the Linux filesystem hierarchy",
+            "Navigate directories using cd, ls, pwd",
+            "Work with absolute and relative paths"
+          ],
+          "quiz": [
+            {
+              "question": "What is the root directory in Linux?",
+              "options": ["/", "/root", "/home", "/usr"],
+              "correct": 0,
+              "explanation": "The / (forward slash) represents the root directory, the top of the filesystem hierarchy."
+            },
+            {
+              "question": "Which command shows your current directory?",
+              "options": ["ls", "cd", "pwd", "dir"],
+              "correct": 2,
+              "explanation": "pwd (print working directory) shows your current location in the filesystem."
+            }
+          ]
+        },
+        {
+          "id": "basic-commands",
+          "name": "Essential Commands",
+          "nodes": ["Shell", "Core Utilities"],
+          "objectives": [
+            "Master basic file operations (ls, cp, mv, rm)",
+            "Use text processing tools (cat, grep, sed)",
+            "Understand file permissions"
+          ],
+          "quiz": [
+            {
+              "question": "Which command copies files?",
+              "options": ["mv", "cp", "ln", "dd"],
+              "correct": 1,
+              "explanation": "cp (copy) duplicates files or directories from source to destination."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "intermediate",
+      "name": "System Administration",
+      "description": "Learn to manage and maintain Linux systems",
+      "icon": "⚙️",
+      "modules": [
+        {
+          "id": "process-management",
+          "name": "Process Control",
+          "nodes": ["Process Management", "systemd"],
+          "objectives": [
+            "Monitor system processes with ps, top, htop",
+            "Control process priorities with nice and renice",
+            "Manage services with systemctl"
+          ],
+          "quiz": [
+            {
+              "question": "What is PID 1 in Linux?",
+              "options": ["kernel", "systemd/init", "bash", "root user"],
+              "correct": 1,
+              "explanation": "PID 1 is the init process (systemd on modern systems), the first userspace process."
+            }
+          ]
+        },
+        {
+          "id": "networking",
+          "name": "Network Configuration",
+          "nodes": ["Network Interfaces", "TCP/IP Stack", "Firewall"],
+          "objectives": [
+            "Configure network interfaces",
+            "Understand TCP/IP fundamentals",
+            "Set up basic firewall rules"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "advanced",
+      "name": "Kernel & Performance",
+      "description": "Deep dive into kernel internals and system optimization",
+      "icon": "🚀",
+      "modules": [
+        {
+          "id": "kernel-internals",
+          "name": "Kernel Architecture",
+          "nodes": ["Kernel Space", "Memory Management", "I/O Subsystem"],
+          "objectives": [
+            "Understand kernel subsystems",
+            "Work with kernel modules",
+            "Tune kernel parameters"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cs-track",
+      "name": "Computer Science Concepts",
+      "description": "Learn CS theory through Linux implementation",
+      "icon": "🎓",
+      "modules": [
+        {
+          "id": "algorithms",
+          "name": "Algorithms in Linux",
+          "nodes": ["CFS Scheduler", "Page Cache", "TCP Protocol"],
+          "objectives": [
+            "Understand O(log n) scheduling in CFS",
+            "Learn LRU page replacement",
+            "Study TCP congestion control algorithms"
+          ]
+        }
+      ]
+    }
+  ],
+  "challenges": [
+    {
+      "id": "fix-permission-denied",
+      "name": "Permission Denied",
+      "scenario": "You need to run a script but get 'Permission denied'. Fix it!",
+      "hint": "Check file permissions with ls -l and make it executable",
+      "solution": "chmod +x script.sh",
+      "points": 10
+    },
+    {
+      "id": "find-large-files",
+      "name": "Disk Space Detective",
+      "scenario": "The disk is full! Find files larger than 100MB in /var",
+      "hint": "Use find with -size option",
+      "solution": "find /var -type f -size +100M",
+      "points": 15
+    },
+    {
+      "id": "zombie-hunter",
+      "name": "Zombie Process Hunter",
+      "scenario": "Find and identify zombie processes on the system",
+      "hint": "Check process state in ps output",
+      "solution": "ps aux | grep Z",
+      "points": 20
+    },
+    {
+      "id": "network-troubleshoot",
+      "name": "Network Connectivity",
+      "scenario": "Website won't load. Diagnose the network issue",
+      "hint": "Check DNS, routing, and connectivity step by step",
+      "solution": "ping google.com; nslookup google.com; ip route show",
+      "points": 25
+    }
+  ],
+  "achievements": [
+    {
+      "id": "first-steps",
+      "name": "First Steps",
+      "description": "Complete your first learning module",
+      "icon": "👶",
+      "condition": {"type": "modules_completed", "count": 1}
+    },
+    {
+      "id": "navigator",
+      "name": "Navigator",
+      "description": "Explore 50 different nodes",
+      "icon": "🧭",
+      "condition": {"type": "nodes_visited", "count": 50}
+    },
+    {
+      "id": "bookworm",
+      "name": "Bookworm",
+      "description": "Bookmark 10 important nodes",
+      "icon": "📚",
+      "condition": {"type": "bookmarks_created", "count": 10}
+    },
+    {
+      "id": "quiz-master",
+      "name": "Quiz Master",
+      "description": "Score 100% on 5 quizzes",
+      "icon": "🏆",
+      "condition": {"type": "perfect_quizzes", "count": 5}
+    },
+    {
+      "id": "challenger",
+      "name": "Challenger",
+      "description": "Complete all challenges",
+      "icon": "💪",
+      "condition": {"type": "all_challenges"}
+    },
+    {
+      "id": "kernel-hacker",
+      "name": "Kernel Hacker",
+      "description": "Complete the advanced kernel path",
+      "icon": "💻",
+      "condition": {"type": "path_completed", "path": "advanced"}
+    }
+  ],
+  "glossary": [
+    {
+      "term": "Kernel",
+      "definition": "The core of the operating system that manages hardware resources and provides services to programs."
+    },
+    {
+      "term": "Process",
+      "definition": "An instance of a running program with its own memory space and resources."
+    },
+    {
+      "term": "Daemon",
+      "definition": "A background process that runs continuously, providing services to other processes."
+    },
+    {
+      "term": "PID",
+      "definition": "Process ID - a unique numerical identifier for each running process."
+    },
+    {
+      "term": "Inode",
+      "definition": "Index node - a data structure that stores metadata about a file or directory."
+    },
+    {
+      "term": "Socket",
+      "definition": "An endpoint for network communication between processes."
+    }
+  ]
+}

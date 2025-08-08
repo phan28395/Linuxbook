@@ -1,0 +1,978 @@
+{
+  "id": "filesystem",
+  "name": "Filesystem Hierarchy",
+  "type": "filesystem",
+  "level": "beginner",
+  "metadata": {
+    "path": "/",
+    "description": "Linux filesystem structure following the Filesystem Hierarchy Standard (FHS 3.0). Everything is a file philosophy.",
+    "created_by": "FHS working group",
+    "managed_by": "Linux Foundation"
+  },
+  "connections": {
+    "reads_from": ["disk_blocks", "inodes", "dentries"],
+    "writes_to": ["disk", "journal", "cache"],
+    "controls": ["file_access", "permissions", "quotas"],
+    "controlled_by": ["VFS", "mount", "kernel"]
+  },
+  "operations": {
+    "commands": [
+      {"cmd": "df -h", "description": "Show disk usage human-readable"},
+      {"cmd": "du -sh *", "description": "Directory sizes"},
+      {"cmd": "mount", "description": "Show mounted filesystems"},
+      {"cmd": "findmnt", "description": "Tree view of mounts"}
+    ],
+    "system_calls": ["open", "read", "write", "close", "stat", "chmod", "chown"],
+    "config_files": [
+      {"path": "/etc/fstab", "format": "fstab", "editable": true},
+      {"path": "/proc/mounts", "format": "mount", "editable": false}
+    ]
+  },
+  "cs_concepts": {
+    "category": ["Operating Systems", "Data Structures"],
+    "topics": ["Tree structure", "Inodes", "Hard/soft links", "Mount points"],
+    "difficulty": "beginner"
+  },
+  "children": [
+    {
+      "id": "root_dir",
+      "name": "/ (Root)",
+      "type": "filesystem",
+      "level": "beginner",
+      "metadata": {
+        "description": "Root directory - top of the filesystem hierarchy. All paths start from here.",
+        "path": "/"
+      },
+      "children": [
+        {
+          "id": "bin_dir",
+          "name": "/bin",
+          "type": "filesystem",
+          "level": "beginner",
+          "metadata": {
+            "description": "Essential command binaries for all users. Must be available in single-user mode.",
+            "path": "/bin"
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "ls /bin", "description": "List essential binaries"},
+              {"cmd": "which ls", "description": "Find command location"}
+            ]
+          },
+          "examples": [
+            {
+              "title": "Common /bin commands",
+              "code": "ls, cp, mv, rm, cat, echo, mkdir, chmod",
+              "explanation": "Core utilities needed for basic system operation"
+            }
+          ]
+        },
+        {
+          "id": "boot_dir",
+          "name": "/boot",
+          "type": "filesystem",
+          "level": "intermediate",
+          "metadata": {
+            "description": "Boot loader files, kernel images, and initial RAM disk.",
+            "path": "/boot"
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "ls -la /boot", "description": "Show boot files"},
+              {"cmd": "file /boot/vmlinuz-*", "description": "Identify kernel type"}
+            ]
+          },
+          "children": [
+            {
+              "id": "kernel_images",
+              "name": "Kernel Images",
+              "type": "filesystem",
+              "level": "intermediate",
+              "metadata": {
+                "description": "vmlinuz-* compressed kernel images.",
+                "path": "/boot/vmlinuz-*"
+              }
+            },
+            {
+              "id": "initramfs",
+              "name": "Initial RAM Filesystem",
+              "type": "filesystem",
+              "level": "intermediate",
+              "metadata": {
+                "description": "initrd.img-* or initramfs-* temporary root filesystem.",
+                "path": "/boot/initrd.img-*"
+              }
+            },
+            {
+              "id": "grub_dir",
+              "name": "GRUB Bootloader",
+              "type": "filesystem",
+              "level": "intermediate",
+              "metadata": {
+                "description": "GRUB configuration and modules.",
+                "path": "/boot/grub/"
+              },
+              "operations": {
+                "commands": [
+                  {"cmd": "update-grub", "description": "Update GRUB configuration", "requires": "root"},
+                  {"cmd": "grub-install /dev/sda", "description": "Install GRUB to MBR", "requires": "root"}
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "dev_dir",
+          "name": "/dev",
+          "type": "filesystem",
+          "level": "intermediate",
+          "metadata": {
+            "description": "Device files - special files representing hardware and virtual devices.",
+            "path": "/dev"
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "ls -l /dev/sd*", "description": "List disk devices"},
+              {"cmd": "file /dev/null", "description": "Identify device type"}
+            ]
+          },
+          "cs_concepts": {
+            "category": ["Operating Systems"],
+            "topics": ["Device files", "Major/minor numbers", "Character vs block devices"],
+            "difficulty": "intermediate"
+          },
+          "children": [
+            {
+              "id": "block_devices",
+              "name": "Block Devices",
+              "type": "filesystem",
+              "level": "intermediate",
+              "metadata": {
+                "description": "Devices that transfer data in blocks (disks, partitions).",
+                "path": "/dev/sd*, /dev/nvme*"
+              },
+              "examples": [
+                {
+                  "title": "Common block devices",
+                  "code": "/dev/sda (first SATA disk)\n/dev/sda1 (first partition)\n/dev/nvme0n1 (first NVMe drive)",
+                  "explanation": "Block devices for storage"
+                }
+              ]
+            },
+            {
+              "id": "char_devices",
+              "name": "Character Devices",
+              "type": "filesystem",
+              "level": "intermediate",
+              "metadata": {
+                "description": "Devices that transfer data character by character.",
+                "path": "/dev/tty*, /dev/random"
+              },
+              "examples": [
+                {
+                  "title": "Special character devices",
+                  "code": "/dev/null (bit bucket)\n/dev/zero (zero source)\n/dev/random (random data)\n/dev/urandom (pseudo-random)",
+                  "explanation": "Virtual devices for special purposes"
+                }
+              ]
+            },
+            {
+              "id": "pseudo_terminals",
+              "name": "Pseudo Terminals",
+              "type": "filesystem",
+              "level": "intermediate",
+              "metadata": {
+                "description": "Virtual terminals for terminal emulators and SSH.",
+                "path": "/dev/pts/*"
+              }
+            }
+          ]
+        },
+        {
+          "id": "etc_dir",
+          "name": "/etc",
+          "type": "filesystem",
+          "level": "beginner",
+          "metadata": {
+            "description": "System-wide configuration files. Editable text files, no binaries.",
+            "path": "/etc"
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "ls /etc/*.conf", "description": "List configuration files"},
+              {"cmd": "grep -r 'string' /etc", "description": "Search in configs"}
+            ]
+          },
+          "children": [
+            {
+              "id": "etc_passwd",
+              "name": "/etc/passwd",
+              "type": "filesystem",
+              "level": "beginner",
+              "metadata": {
+                "description": "User account information (not passwords despite name).",
+                "path": "/etc/passwd"
+              },
+              "operations": {
+                "commands": [
+                  {"cmd": "getent passwd", "description": "Display user database"},
+                  {"cmd": "useradd username", "description": "Add user", "requires": "root"}
+                ]
+              }
+            },
+            {
+              "id": "etc_shadow",
+              "name": "/etc/shadow",
+              "type": "filesystem",
+              "level": "intermediate",
+              "metadata": {
+                "description": "Encrypted password hashes and password aging info.",
+                "path": "/etc/shadow"
+              },
+              "operations": {
+                "commands": [
+                  {"cmd": "passwd username", "description": "Change password", "requires": "root or owner"},
+                  {"cmd": "chage -l username", "description": "Password aging info"}
+                ]
+              }
+            },
+            {
+              "id": "etc_fstab",
+              "name": "/etc/fstab",
+              "type": "filesystem",
+              "level": "intermediate",
+              "metadata": {
+                "description": "Filesystem mount table - defines what gets mounted at boot.",
+                "path": "/etc/fstab"
+              },
+              "examples": [
+                {
+                  "title": "fstab entry format",
+                  "code": "UUID=abc-123 /home ext4 defaults 0 2",
+                  "explanation": "device mount-point fs-type options dump pass"
+                }
+              ]
+            },
+            {
+              "id": "etc_systemd",
+              "name": "/etc/systemd",
+              "type": "filesystem",
+              "level": "intermediate",
+              "metadata": {
+                "description": "systemd configuration and unit files.",
+                "path": "/etc/systemd/"
+              },
+              "children": [
+                {
+                  "id": "systemd_system",
+                  "name": "/etc/systemd/system",
+                  "type": "filesystem",
+                  "level": "intermediate",
+                  "metadata": {
+                    "description": "Local systemd unit files and overrides.",
+                    "path": "/etc/systemd/system/"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "etc_network",
+              "name": "/etc/network",
+              "type": "filesystem",
+              "level": "intermediate",
+              "metadata": {
+                "description": "Network configuration (Debian/Ubuntu).",
+                "path": "/etc/network/"
+              }
+            },
+            {
+              "id": "etc_ssh",
+              "name": "/etc/ssh",
+              "type": "filesystem",
+              "level": "intermediate",
+              "metadata": {
+                "description": "SSH server and client configuration.",
+                "path": "/etc/ssh/"
+              },
+              "operations": {
+                "commands": [
+                  {"cmd": "sshd -t", "description": "Test SSH config", "requires": "root"},
+                  {"cmd": "ssh-keygen -A", "description": "Generate host keys", "requires": "root"}
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "home_dir",
+          "name": "/home",
+          "type": "filesystem",
+          "level": "beginner",
+          "metadata": {
+            "description": "User home directories containing personal files and settings.",
+            "path": "/home"
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "cd ~", "description": "Go to home directory"},
+              {"cmd": "du -sh ~", "description": "Check home size"}
+            ]
+          },
+          "children": [
+            {
+              "id": "user_home",
+              "name": "User Directories",
+              "type": "filesystem",
+              "level": "beginner",
+              "metadata": {
+                "description": "Individual user home directories (/home/username).",
+                "path": "/home/*"
+              },
+              "children": [
+                {
+                  "id": "dotfiles",
+                  "name": "Dotfiles",
+                  "type": "filesystem",
+                  "level": "beginner",
+                  "metadata": {
+                    "description": "Hidden configuration files starting with dot (.bashrc, .vimrc).",
+                    "path": "~/.*"
+                  },
+                  "examples": [
+                    {
+                      "title": "Common dotfiles",
+                      "code": ".bashrc (bash config)\n.profile (login shell)\n.ssh/ (SSH keys)\n.gitconfig (git settings)",
+                      "explanation": "Per-user configuration files"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "lib_dir",
+          "name": "/lib",
+          "type": "filesystem",
+          "level": "intermediate",
+          "metadata": {
+            "description": "Essential shared libraries and kernel modules.",
+            "path": "/lib"
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "ldd /bin/ls", "description": "Show library dependencies"},
+              {"cmd": "ldconfig -p", "description": "Print library cache"}
+            ]
+          },
+          "children": [
+            {
+              "id": "lib_modules",
+              "name": "/lib/modules",
+              "type": "filesystem",
+              "level": "intermediate",
+              "metadata": {
+                "description": "Kernel modules for each installed kernel version.",
+                "path": "/lib/modules/"
+              },
+              "operations": {
+                "commands": [
+                  {"cmd": "modprobe module_name", "description": "Load kernel module"},
+                  {"cmd": "lsmod", "description": "List loaded modules"}
+                ]
+              }
+            },
+            {
+              "id": "lib_systemd",
+              "name": "/lib/systemd",
+              "type": "filesystem",
+              "level": "intermediate",
+              "metadata": {
+                "description": "systemd binaries and default unit files.",
+                "path": "/lib/systemd/"
+              }
+            }
+          ]
+        },
+        {
+          "id": "opt_dir",
+          "name": "/opt",
+          "type": "filesystem",
+          "level": "beginner",
+          "metadata": {
+            "description": "Optional application software packages. Third-party software.",
+            "path": "/opt"
+          },
+          "examples": [
+            {
+              "title": "Typical /opt usage",
+              "code": "/opt/google/chrome/\n/opt/zoom/\n/opt/custom-app/",
+              "explanation": "Self-contained third-party applications"
+            }
+          ]
+        },
+        {
+          "id": "proc_dir",
+          "name": "/proc",
+          "type": "filesystem",
+          "level": "intermediate",
+          "metadata": {
+            "description": "Virtual filesystem (procfs) providing process and kernel information.",
+            "path": "/proc"
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "cat /proc/cpuinfo", "description": "CPU information"},
+              {"cmd": "cat /proc/meminfo", "description": "Memory information"},
+              {"cmd": "ls /proc/$(pgrep bash)", "description": "Process info"}
+            ]
+          },
+          "cs_concepts": {
+            "category": ["Operating Systems"],
+            "topics": ["Virtual filesystem", "Kernel interface", "Process information"],
+            "difficulty": "intermediate"
+          },
+          "children": [
+            {
+              "id": "proc_pid",
+              "name": "/proc/[pid]",
+              "type": "filesystem",
+              "level": "intermediate",
+              "metadata": {
+                "description": "Per-process information directories.",
+                "path": "/proc/[0-9]*"
+              },
+              "children": [
+                {
+                  "id": "proc_pid_status",
+                  "name": "status",
+                  "type": "filesystem",
+                  "level": "intermediate",
+                  "metadata": {
+                    "description": "Human-readable process status.",
+                    "path": "/proc/[pid]/status"
+                  }
+                },
+                {
+                  "id": "proc_pid_cmdline",
+                  "name": "cmdline",
+                  "type": "filesystem",
+                  "level": "intermediate",
+                  "metadata": {
+                    "description": "Command line arguments.",
+                    "path": "/proc/[pid]/cmdline"
+                  }
+                },
+                {
+                  "id": "proc_pid_fd",
+                  "name": "fd/",
+                  "type": "filesystem",
+                  "level": "intermediate",
+                  "metadata": {
+                    "description": "Open file descriptors.",
+                    "path": "/proc/[pid]/fd/"
+                  },
+                  "operations": {
+                    "commands": [
+                      {"cmd": "ls -l /proc/$$/fd", "description": "Show shell's open files"}
+                    ]
+                  }
+                },
+                {
+                  "id": "proc_pid_maps",
+                  "name": "maps",
+                  "type": "filesystem",
+                  "level": "advanced",
+                  "metadata": {
+                    "description": "Memory mappings.",
+                    "path": "/proc/[pid]/maps"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "proc_sys",
+              "name": "/proc/sys",
+              "type": "filesystem",
+              "level": "intermediate",
+              "metadata": {
+                "description": "Kernel tunables - runtime kernel parameters.",
+                "path": "/proc/sys/"
+              },
+              "operations": {
+                "commands": [
+                  {"cmd": "sysctl -a", "description": "Show all kernel parameters"},
+                  {"cmd": "echo 1 > /proc/sys/net/ipv4/ip_forward", "description": "Enable IP forwarding", "requires": "root"}
+                ]
+              },
+              "children": [
+                {
+                  "id": "proc_sys_kernel",
+                  "name": "kernel/",
+                  "type": "filesystem",
+                  "level": "intermediate",
+                  "metadata": {
+                    "description": "Core kernel parameters.",
+                    "path": "/proc/sys/kernel/"
+                  }
+                },
+                {
+                  "id": "proc_sys_vm",
+                  "name": "vm/",
+                  "type": "filesystem",
+                  "level": "intermediate",
+                  "metadata": {
+                    "description": "Virtual memory parameters.",
+                    "path": "/proc/sys/vm/"
+                  }
+                },
+                {
+                  "id": "proc_sys_net",
+                  "name": "net/",
+                  "type": "filesystem",
+                  "level": "intermediate",
+                  "metadata": {
+                    "description": "Network stack parameters.",
+                    "path": "/proc/sys/net/"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "sys_dir",
+          "name": "/sys",
+          "type": "filesystem",
+          "level": "intermediate",
+          "metadata": {
+            "description": "Virtual filesystem (sysfs) exposing kernel objects and their attributes.",
+            "path": "/sys"
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "find /sys -name brightness", "description": "Find screen brightness control"},
+              {"cmd": "cat /sys/class/net/eth0/statistics/rx_bytes", "description": "Network statistics"}
+            ]
+          },
+          "cs_concepts": {
+            "category": ["Operating Systems"],
+            "topics": ["Kernel objects", "Device model", "kobject hierarchy"],
+            "difficulty": "intermediate"
+          },
+          "children": [
+            {
+              "id": "sys_class",
+              "name": "/sys/class",
+              "type": "filesystem",
+              "level": "intermediate",
+              "metadata": {
+                "description": "Device classes organized by type.",
+                "path": "/sys/class/"
+              },
+              "children": [
+                {
+                  "id": "sys_class_net",
+                  "name": "net/",
+                  "type": "filesystem",
+                  "level": "intermediate",
+                  "metadata": {
+                    "description": "Network interfaces.",
+                    "path": "/sys/class/net/"
+                  }
+                },
+                {
+                  "id": "sys_class_block",
+                  "name": "block/",
+                  "type": "filesystem",
+                  "level": "intermediate",
+                  "metadata": {
+                    "description": "Block devices.",
+                    "path": "/sys/class/block/"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "sys_devices",
+              "name": "/sys/devices",
+              "type": "filesystem",
+              "level": "advanced",
+              "metadata": {
+                "description": "Device hierarchy as seen by kernel.",
+                "path": "/sys/devices/"
+              }
+            },
+            {
+              "id": "sys_kernel",
+              "name": "/sys/kernel",
+              "type": "filesystem",
+              "level": "intermediate",
+              "metadata": {
+                "description": "Kernel subsystem information.",
+                "path": "/sys/kernel/"
+              }
+            }
+          ]
+        },
+        {
+          "id": "tmp_dir",
+          "name": "/tmp",
+          "type": "filesystem",
+          "level": "beginner",
+          "metadata": {
+            "description": "Temporary files. Usually cleared on reboot. Often mounted as tmpfs in RAM.",
+            "path": "/tmp"
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "mktemp", "description": "Create temporary file safely"},
+              {"cmd": "find /tmp -mtime +7 -delete", "description": "Clean old temp files"}
+            ]
+          },
+          "performance": {
+            "metrics": {
+              "storage": "Often RAM-based (tmpfs)",
+              "persistence": "Cleared on reboot"
+            }
+          }
+        },
+        {
+          "id": "usr_dir",
+          "name": "/usr",
+          "type": "filesystem",
+          "level": "beginner",
+          "metadata": {
+            "description": "Secondary hierarchy for user programs and data. Shareable, read-only data.",
+            "path": "/usr"
+          },
+          "children": [
+            {
+              "id": "usr_bin",
+              "name": "/usr/bin",
+              "type": "filesystem",
+              "level": "beginner",
+              "metadata": {
+                "description": "Non-essential command binaries for all users.",
+                "path": "/usr/bin"
+              }
+            },
+            {
+              "id": "usr_lib",
+              "name": "/usr/lib",
+              "type": "filesystem",
+              "level": "intermediate",
+              "metadata": {
+                "description": "Libraries for /usr/bin and /usr/sbin binaries.",
+                "path": "/usr/lib"
+              }
+            },
+            {
+              "id": "usr_local",
+              "name": "/usr/local",
+              "type": "filesystem",
+              "level": "intermediate",
+              "metadata": {
+                "description": "Locally installed software, separate from distribution packages.",
+                "path": "/usr/local/"
+              },
+              "examples": [
+                {
+                  "title": "Typical /usr/local usage",
+                  "code": "./configure --prefix=/usr/local\nmake && make install",
+                  "explanation": "Install software outside package manager"
+                }
+              ]
+            },
+            {
+              "id": "usr_share",
+              "name": "/usr/share",
+              "type": "filesystem",
+              "level": "beginner",
+              "metadata": {
+                "description": "Architecture-independent shared data (docs, icons, fonts).",
+                "path": "/usr/share/"
+              }
+            },
+            {
+              "id": "usr_src",
+              "name": "/usr/src",
+              "type": "filesystem",
+              "level": "intermediate",
+              "metadata": {
+                "description": "Source code, usually kernel sources.",
+                "path": "/usr/src/"
+              }
+            }
+          ]
+        },
+        {
+          "id": "var_dir",
+          "name": "/var",
+          "type": "filesystem",
+          "level": "intermediate",
+          "metadata": {
+            "description": "Variable data - files that change during system operation.",
+            "path": "/var"
+          },
+          "children": [
+            {
+              "id": "var_log",
+              "name": "/var/log",
+              "type": "filesystem",
+              "level": "beginner",
+              "metadata": {
+                "description": "System and application log files.",
+                "path": "/var/log/"
+              },
+              "operations": {
+                "commands": [
+                  {"cmd": "tail -f /var/log/syslog", "description": "Follow system log"},
+                  {"cmd": "journalctl -xe", "description": "View systemd logs"},
+                  {"cmd": "logrotate", "description": "Rotate log files"}
+                ]
+              },
+              "children": [
+                {
+                  "id": "var_log_syslog",
+                  "name": "syslog/messages",
+                  "type": "filesystem",
+                  "level": "beginner",
+                  "metadata": {
+                    "description": "Main system log file.",
+                    "path": "/var/log/syslog or /var/log/messages"
+                  }
+                },
+                {
+                  "id": "var_log_auth",
+                  "name": "auth.log",
+                  "type": "filesystem",
+                  "level": "intermediate",
+                  "metadata": {
+                    "description": "Authentication and authorization logs.",
+                    "path": "/var/log/auth.log"
+                  }
+                },
+                {
+                  "id": "var_log_journal",
+                  "name": "journal/",
+                  "type": "filesystem",
+                  "level": "intermediate",
+                  "metadata": {
+                    "description": "systemd journal binary logs.",
+                    "path": "/var/log/journal/"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "var_cache",
+              "name": "/var/cache",
+              "type": "filesystem",
+              "level": "intermediate",
+              "metadata": {
+                "description": "Application cache data that can be regenerated.",
+                "path": "/var/cache/"
+              },
+              "examples": [
+                {
+                  "title": "Package manager cache",
+                  "code": "/var/cache/apt/ (Debian/Ubuntu)\n/var/cache/yum/ (RHEL/CentOS)",
+                  "explanation": "Downloaded packages cached for reuse"
+                }
+              ]
+            },
+            {
+              "id": "var_lib",
+              "name": "/var/lib",
+              "type": "filesystem",
+              "level": "intermediate",
+              "metadata": {
+                "description": "Variable state information for programs.",
+                "path": "/var/lib/"
+              },
+              "children": [
+                {
+                  "id": "var_lib_docker",
+                  "name": "docker/",
+                  "type": "filesystem",
+                  "level": "intermediate",
+                  "metadata": {
+                    "description": "Docker images and containers.",
+                    "path": "/var/lib/docker/"
+                  }
+                },
+                {
+                  "id": "var_lib_mysql",
+                  "name": "mysql/",
+                  "type": "filesystem",
+                  "level": "intermediate",
+                  "metadata": {
+                    "description": "MySQL database files.",
+                    "path": "/var/lib/mysql/"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "var_spool",
+              "name": "/var/spool",
+              "type": "filesystem",
+              "level": "intermediate",
+              "metadata": {
+                "description": "Spool directories for tasks waiting to be processed.",
+                "path": "/var/spool/"
+              },
+              "children": [
+                {
+                  "id": "var_spool_cron",
+                  "name": "cron/",
+                  "type": "filesystem",
+                  "level": "intermediate",
+                  "metadata": {
+                    "description": "User crontab files.",
+                    "path": "/var/spool/cron/"
+                  }
+                },
+                {
+                  "id": "var_spool_mail",
+                  "name": "mail/",
+                  "type": "filesystem",
+                  "level": "intermediate",
+                  "metadata": {
+                    "description": "User mailboxes.",
+                    "path": "/var/spool/mail/"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "var_run",
+              "name": "/var/run",
+              "type": "filesystem",
+              "level": "intermediate",
+              "metadata": {
+                "description": "Runtime variable data (PIDs, sockets). Often symlink to /run.",
+                "path": "/var/run or /run"
+              },
+              "examples": [
+                {
+                  "title": "Common runtime files",
+                  "code": "/var/run/*.pid (process IDs)\n/var/run/*.sock (Unix sockets)",
+                  "explanation": "Temporary runtime state"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "mnt_media",
+          "name": "/mnt and /media",
+          "type": "filesystem",
+          "level": "beginner",
+          "metadata": {
+            "description": "Mount points for temporary (/mnt) and removable media (/media).",
+            "path": "/mnt, /media"
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "mount /dev/sdb1 /mnt", "description": "Mount device", "requires": "root"},
+              {"cmd": "umount /mnt", "description": "Unmount", "requires": "root"}
+            ]
+          }
+        },
+        {
+          "id": "srv_dir",
+          "name": "/srv",
+          "type": "filesystem",
+          "level": "beginner",
+          "metadata": {
+            "description": "Service data - data for services provided by the system.",
+            "path": "/srv"
+          },
+          "examples": [
+            {
+              "title": "Typical /srv usage",
+              "code": "/srv/www/ (web server files)\n/srv/ftp/ (FTP server files)",
+              "explanation": "Site-specific data served by system"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "special_filesystems",
+      "name": "Special Filesystems",
+      "type": "filesystem",
+      "level": "intermediate",
+      "metadata": {
+        "description": "Virtual and pseudo filesystems that don't store data on disk."
+      },
+      "children": [
+        {
+          "id": "tmpfs",
+          "name": "tmpfs",
+          "type": "filesystem",
+          "level": "intermediate",
+          "metadata": {
+            "description": "Temporary filesystem in RAM, faster but volatile.",
+            "path": "Various mount points"
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "mount -t tmpfs -o size=1G tmpfs /mnt/ramdisk", "description": "Create RAM disk", "requires": "root"},
+              {"cmd": "df -t tmpfs", "description": "Show tmpfs mounts"}
+            ]
+          },
+          "performance": {
+            "metrics": {
+              "speed": "RAM speed",
+              "persistence": "Lost on reboot"
+            }
+          }
+        },
+        {
+          "id": "devtmpfs",
+          "name": "devtmpfs",
+          "type": "filesystem",
+          "level": "intermediate",
+          "metadata": {
+            "description": "Automatic device node creation for /dev.",
+            "path": "/dev"
+          }
+        },
+        {
+          "id": "cgroupfs",
+          "name": "cgroup filesystem",
+          "type": "filesystem",
+          "level": "advanced",
+          "metadata": {
+            "description": "Control group hierarchy for resource management.",
+            "path": "/sys/fs/cgroup/"
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "systemd-cgls", "description": "Show cgroup tree"},
+              {"cmd": "cat /sys/fs/cgroup/memory/memory.limit_in_bytes", "description": "Memory limit"}
+            ]
+          }
+        },
+        {
+          "id": "debugfs",
+          "name": "debugfs",
+          "type": "filesystem",
+          "level": "advanced",
+          "metadata": {
+            "description": "Kernel debugging interface.",
+            "path": "/sys/kernel/debug/"
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "mount -t debugfs none /sys/kernel/debug", "description": "Mount debugfs", "requires": "root"}
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

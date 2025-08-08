@@ -1,0 +1,496 @@
+{
+  "id": "network",
+  "name": "Networking Stack",
+  "type": "network",
+  "level": "intermediate",
+  "metadata": {
+    "path": "/net/",
+    "description": "Complete TCP/IP protocol stack implementation with advanced features like netfilter, traffic control, and virtualization.",
+    "created_by": "Alan Cox, David S. Miller, and contributors",
+    "managed_by": "netdev maintainers"
+  },
+  "connections": {
+    "reads_from": ["network_interfaces", "sockets", "routing_table"],
+    "writes_to": ["network_devices", "packet_buffers", "/proc/net"],
+    "controls": ["packet_flow", "routing", "filtering"],
+    "controlled_by": ["iptables", "tc", "ip", "NetworkManager"]
+  },
+  "operations": {
+    "commands": [
+      {"cmd": "ip addr show", "description": "Show all network interfaces"},
+      {"cmd": "ss -tuln", "description": "Show listening sockets"},
+      {"cmd": "tcpdump -i eth0", "description": "Capture network packets", "requires": "root"},
+      {"cmd": "iperf3 -s", "description": "Network performance testing"}
+    ],
+    "system_calls": ["socket", "bind", "listen", "accept", "connect", "send", "recv", "select", "epoll"],
+    "config_files": [
+      {"path": "/etc/network/interfaces", "format": "debian-style", "editable": true},
+      {"path": "/etc/netplan/*.yaml", "format": "yaml", "editable": true},
+      {"path": "/etc/sysconfig/network-scripts/", "format": "shell", "editable": true}
+    ]
+  },
+  "cs_concepts": {
+    "category": ["Networking", "Distributed Systems"],
+    "topics": ["OSI model", "TCP/IP stack", "Routing algorithms", "Network protocols"],
+    "difficulty": "intermediate"
+  },
+  "performance": {
+    "metrics": {
+      "throughput": "10Gbps+ with modern NICs",
+      "latency": "RTT < 100μs local network",
+      "packet_processing": ">1M packets/sec"
+    },
+    "bottlenecks": ["Interrupt handling", "Context switches", "Buffer copying"],
+    "tuning": ["RSS/RPS", "XDP/eBPF", "Offloading", "Buffer sizes"]
+  },
+  "children": [
+    {
+      "id": "network_layers",
+      "name": "Protocol Layers",
+      "type": "network",
+      "level": "intermediate",
+      "metadata": {
+        "description": "OSI model implementation in Linux networking stack."
+      },
+      "children": [
+        {
+          "id": "physical_layer",
+          "name": "Physical Layer",
+          "type": "network",
+          "level": "beginner",
+          "metadata": {
+            "description": "Network hardware interfaces and drivers.",
+            "path": "/drivers/net/"
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "ethtool eth0", "description": "Query/set NIC parameters"},
+              {"cmd": "mii-tool eth0", "description": "Media-independent interface status"},
+              {"cmd": "lspci | grep -i net", "description": "List network hardware"}
+            ]
+          },
+          "cs_concepts": {
+            "category": ["Computer Architecture"],
+            "topics": ["NIC hardware", "DMA", "Interrupt coalescing"],
+            "difficulty": "intermediate"
+          }
+        },
+        {
+          "id": "data_link_layer",
+          "name": "Data Link Layer",
+          "type": "network",
+          "level": "intermediate",
+          "metadata": {
+            "description": "Ethernet, ARP, bridges, and VLANs.",
+            "path": "/net/ethernet/"
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "arp -a", "description": "Show ARP cache"},
+              {"cmd": "bridge link show", "description": "Show bridge ports"},
+              {"cmd": "ip link add link eth0 name eth0.100 type vlan id 100", "description": "Create VLAN"}
+            ]
+          },
+          "cs_concepts": {
+            "category": ["Networking"],
+            "topics": ["MAC addresses", "ARP protocol", "Spanning tree", "VLANs"],
+            "difficulty": "intermediate"
+          }
+        },
+        {
+          "id": "network_layer_ip",
+          "name": "Network Layer (IP)",
+          "type": "network",
+          "level": "intermediate",
+          "metadata": {
+            "description": "IPv4 and IPv6 routing, addressing, and forwarding.",
+            "path": "/net/ipv4/, /net/ipv6/"
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "ip route show", "description": "Display routing table"},
+              {"cmd": "traceroute google.com", "description": "Trace packet path"},
+              {"cmd": "ip -6 addr show", "description": "Show IPv6 addresses"}
+            ],
+            "system_calls": ["sendto", "recvfrom"]
+          },
+          "cs_concepts": {
+            "category": ["Networking", "Algorithms"],
+            "topics": ["Dijkstra routing", "CIDR", "Subnetting", "NAT"],
+            "difficulty": "intermediate"
+          },
+          "performance": {
+            "metrics": {
+              "routing_lookup": "O(log n) with FIB trie",
+              "forwarding_rate": ">10Mpps with XDP"
+            }
+          }
+        },
+        {
+          "id": "transport_layer",
+          "name": "Transport Layer",
+          "type": "network",
+          "level": "intermediate",
+          "metadata": {
+            "description": "TCP and UDP protocol implementations.",
+            "path": "/net/ipv4/tcp.c, /net/ipv4/udp.c"
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "ss -tan", "description": "TCP connections"},
+              {"cmd": "ss -uan", "description": "UDP sockets"},
+              {"cmd": "nstat", "description": "Network statistics"}
+            ]
+          },
+          "cs_concepts": {
+            "category": ["Networking", "Algorithms"],
+            "topics": ["TCP congestion control", "Sliding window", "Three-way handshake", "Flow control"],
+            "difficulty": "intermediate"
+          },
+          "children": [
+            {
+              "id": "tcp_protocol",
+              "name": "TCP Protocol",
+              "type": "network",
+              "level": "advanced",
+              "metadata": {
+                "description": "Reliable, ordered, connection-oriented protocol with congestion control.",
+                "path": "/net/ipv4/tcp*.c"
+              },
+              "cs_concepts": {
+                "category": ["Networking", "Algorithms"],
+                "topics": ["CUBIC", "BBR", "Nagle's algorithm", "Selective ACK"],
+                "difficulty": "advanced"
+              },
+              "performance": {
+                "metrics": {
+                  "throughput": "Line rate with TSO/GSO",
+                  "latency": "RTT dependent",
+                  "congestion_algorithms": ["cubic", "bbr", "reno"]
+                }
+              }
+            },
+            {
+              "id": "udp_protocol",
+              "name": "UDP Protocol",
+              "type": "network",
+              "level": "beginner",
+              "metadata": {
+                "description": "Unreliable, unordered, connectionless datagram protocol.",
+                "path": "/net/ipv4/udp.c"
+              },
+              "examples": [
+                {
+                  "title": "Create UDP server",
+                  "code": "nc -u -l 8080",
+                  "explanation": "Listen on UDP port 8080"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "application_layer",
+          "name": "Application Layer",
+          "type": "network",
+          "level": "beginner",
+          "metadata": {
+            "description": "Socket API and application protocols.",
+            "path": "/net/socket.c"
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "lsof -i :80", "description": "Show processes using port 80"},
+              {"cmd": "netstat -tulpn", "description": "Show all listening ports"}
+            ]
+          },
+          "cs_concepts": {
+            "category": ["Networking", "System Programming"],
+            "topics": ["BSD sockets", "select/poll/epoll", "Non-blocking I/O"],
+            "difficulty": "intermediate"
+          }
+        }
+      ]
+    },
+    {
+      "id": "network_interfaces",
+      "name": "Network Interfaces",
+      "type": "network",
+      "level": "intermediate",
+      "metadata": {
+        "description": "Physical and virtual network adapters management.",
+        "path": "/net/core/dev.c"
+      },
+      "children": [
+        {
+          "id": "physical_interfaces",
+          "name": "Physical Interfaces",
+          "type": "network",
+          "level": "beginner",
+          "metadata": {
+            "description": "Ethernet, WiFi, and other hardware network adapters."
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "iwconfig", "description": "Configure wireless interfaces"},
+              {"cmd": "rfkill list", "description": "Show RF kill switch status"},
+              {"cmd": "iw dev wlan0 scan", "description": "Scan for WiFi networks"}
+            ]
+          }
+        },
+        {
+          "id": "virtual_interfaces",
+          "name": "Virtual Interfaces",
+          "type": "network",
+          "level": "intermediate",
+          "metadata": {
+            "description": "Software-defined network interfaces for virtualization and tunneling."
+          },
+          "children": [
+            {
+              "id": "bridge_interfaces",
+              "name": "Bridge Interfaces",
+              "type": "network",
+              "level": "intermediate",
+              "metadata": {
+                "description": "Software L2 switch connecting multiple interfaces."
+              },
+              "operations": {
+                "commands": [
+                  {"cmd": "brctl addbr br0", "description": "Create bridge"},
+                  {"cmd": "brctl addif br0 eth0", "description": "Add interface to bridge"},
+                  {"cmd": "bridge fdb show", "description": "Show forwarding database"}
+                ]
+              }
+            },
+            {
+              "id": "vlan_interfaces",
+              "name": "VLAN Interfaces",
+              "type": "network",
+              "level": "intermediate",
+              "metadata": {
+                "description": "802.1Q VLAN tagging for network segmentation."
+              },
+              "operations": {
+                "commands": [
+                  {"cmd": "vconfig add eth0 100", "description": "Create VLAN 100"},
+                  {"cmd": "ip link add link eth0 name eth0.100 type vlan id 100", "description": "Modern VLAN creation"}
+                ]
+              }
+            },
+            {
+              "id": "tunnel_interfaces",
+              "name": "Tunnel Interfaces",
+              "type": "network",
+              "level": "advanced",
+              "metadata": {
+                "description": "VPN and overlay network tunnels (GRE, VXLAN, IPSec, WireGuard)."
+              },
+              "operations": {
+                "commands": [
+                  {"cmd": "ip tunnel add tun0 mode gre remote 192.168.1.1", "description": "Create GRE tunnel"},
+                  {"cmd": "ip link add vxlan0 type vxlan id 42 dev eth0", "description": "Create VXLAN tunnel"}
+                ]
+              }
+            },
+            {
+              "id": "tun_tap",
+              "name": "TUN/TAP Devices",
+              "type": "network",
+              "level": "intermediate",
+              "metadata": {
+                "description": "Virtual network devices for userspace packet processing."
+              },
+              "examples": [
+                {
+                  "title": "Create TAP device",
+                  "code": "ip tuntap add dev tap0 mode tap",
+                  "explanation": "Create virtual Ethernet device"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "netfilter",
+      "name": "Netfilter/iptables",
+      "type": "network",
+      "level": "advanced",
+      "metadata": {
+        "description": "Packet filtering framework for firewalling, NAT, and packet mangling.",
+        "path": "/net/netfilter/"
+      },
+      "operations": {
+        "commands": [
+          {"cmd": "iptables -L -n -v", "description": "List firewall rules with counters"},
+          {"cmd": "iptables -A INPUT -p tcp --dport 22 -j ACCEPT", "description": "Allow SSH", "requires": "root"},
+          {"cmd": "nft list ruleset", "description": "List nftables rules"}
+        ]
+      },
+      "cs_concepts": {
+        "category": ["Networking", "Security"],
+        "topics": ["Stateful filtering", "Connection tracking", "NAT", "Packet mangling"],
+        "difficulty": "advanced"
+      },
+      "children": [
+        {
+          "id": "netfilter_hooks",
+          "name": "Netfilter Hooks",
+          "type": "network",
+          "level": "advanced",
+          "metadata": {
+            "description": "PREROUTING, INPUT, FORWARD, OUTPUT, POSTROUTING chains.",
+            "path": "/include/linux/netfilter.h"
+          },
+          "cs_concepts": {
+            "category": ["Networking"],
+            "topics": ["Packet flow", "Hook priorities", "Chain traversal"],
+            "difficulty": "advanced"
+          }
+        },
+        {
+          "id": "connection_tracking",
+          "name": "Connection Tracking",
+          "type": "network",
+          "level": "advanced",
+          "metadata": {
+            "description": "Stateful packet inspection and connection state management.",
+            "path": "/net/netfilter/nf_conntrack_core.c"
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "conntrack -L", "description": "List tracked connections"},
+              {"cmd": "cat /proc/net/nf_conntrack", "description": "Raw conntrack table"}
+            ]
+          },
+          "performance": {
+            "metrics": {
+              "max_connections": "configurable via nf_conntrack_max",
+              "hash_table_size": "auto-sized based on memory"
+            }
+          }
+        },
+        {
+          "id": "nat",
+          "name": "Network Address Translation",
+          "type": "network",
+          "level": "intermediate",
+          "metadata": {
+            "description": "SNAT, DNAT, and MASQUERADE for address translation."
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE", "description": "Enable NAT", "requires": "root"},
+              {"cmd": "iptables -t nat -L", "description": "List NAT rules"}
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "traffic_control",
+      "name": "Traffic Control (tc)",
+      "type": "network",
+      "level": "advanced",
+      "metadata": {
+        "description": "Quality of Service (QoS), bandwidth shaping, and packet scheduling.",
+        "path": "/net/sched/"
+      },
+      "operations": {
+        "commands": [
+          {"cmd": "tc qdisc show", "description": "Show queuing disciplines"},
+          {"cmd": "tc class show dev eth0", "description": "Show traffic classes"},
+          {"cmd": "tc qdisc add dev eth0 root tbf rate 1mbit burst 32kbit latency 400ms", "description": "Rate limiting"}
+        ]
+      },
+      "cs_concepts": {
+        "category": ["Networking", "Algorithms"],
+        "topics": ["Token bucket", "HTB", "Fair queuing", "Traffic shaping"],
+        "difficulty": "advanced"
+      },
+      "children": [
+        {
+          "id": "qdisc",
+          "name": "Queuing Disciplines",
+          "type": "network",
+          "level": "advanced",
+          "metadata": {
+            "description": "Packet schedulers: pfifo_fast, HTB, FQ_CoDel, etc."
+          },
+          "cs_concepts": {
+            "category": ["Algorithms"],
+            "topics": ["Queue management", "AQM", "CoDel algorithm"],
+            "difficulty": "advanced"
+          }
+        },
+        {
+          "id": "traffic_shaping",
+          "name": "Traffic Shaping",
+          "type": "network",
+          "level": "advanced",
+          "metadata": {
+            "description": "Bandwidth control and rate limiting."
+          },
+          "examples": [
+            {
+              "title": "Limit bandwidth to 10Mbps",
+              "code": "tc qdisc add dev eth0 root handle 1: htb default 30\ntc class add dev eth0 parent 1: classid 1:1 htb rate 10mbit",
+              "explanation": "Create HTB hierarchy for bandwidth control"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "network_namespaces",
+      "name": "Network Namespaces",
+      "type": "network",
+      "level": "advanced",
+      "metadata": {
+        "description": "Network stack isolation for containers and virtualization.",
+        "path": "/net/core/net_namespace.c"
+      },
+      "operations": {
+        "commands": [
+          {"cmd": "ip netns add myns", "description": "Create network namespace"},
+          {"cmd": "ip netns exec myns ip addr show", "description": "Execute in namespace"},
+          {"cmd": "ip link add veth0 type veth peer name veth1", "description": "Create veth pair"}
+        ]
+      },
+      "cs_concepts": {
+        "category": ["Virtualization", "Operating Systems"],
+        "topics": ["Resource isolation", "Container networking", "Virtual switches"],
+        "difficulty": "advanced"
+      }
+    },
+    {
+      "id": "ebpf_networking",
+      "name": "eBPF/XDP",
+      "type": "network",
+      "level": "advanced",
+      "metadata": {
+        "description": "Programmable packet processing in kernel space.",
+        "path": "/kernel/bpf/"
+      },
+      "operations": {
+        "commands": [
+          {"cmd": "bpftool prog list", "description": "List BPF programs"},
+          {"cmd": "tc filter add dev eth0 ingress bpf obj prog.o", "description": "Attach BPF program"}
+        ]
+      },
+      "cs_concepts": {
+        "category": ["Systems Programming", "Networking"],
+        "topics": ["JIT compilation", "Packet filtering", "Load balancing", "DDoS protection"],
+        "difficulty": "advanced"
+      },
+      "performance": {
+        "metrics": {
+          "packet_rate": ">20Mpps with XDP",
+          "latency": "Near zero overhead"
+        }
+      }
+    }
+  ]
+}

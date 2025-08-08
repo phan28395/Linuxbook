@@ -1,0 +1,615 @@
+{
+  "id": "kernel",
+  "name": "Kernel Space",
+  "type": "kernel",
+  "level": "advanced",
+  "metadata": {
+    "path": "/boot/vmlinuz",
+    "description": "The core of the Linux operating system, managing hardware resources and providing essential services. Ring 0 privilege level.",
+    "created_by": "Linus Torvalds (1991)",
+    "managed_by": "Linux kernel maintainers"
+  },
+  "connections": {
+    "reads_from": ["hardware", "firmware"],
+    "writes_to": ["/proc", "/sys", "memory", "devices"],
+    "controls": ["cpu", "memory", "io", "processes"],
+    "controlled_by": ["bootloader", "init_system"]
+  },
+  "operations": {
+    "commands": [
+      {"cmd": "uname -r", "description": "Show kernel version", "example": "5.15.0-58-generic", "requires": "none"},
+      {"cmd": "dmesg", "description": "Display kernel ring buffer", "example": "dmesg | grep error", "requires": "root or sudo"},
+      {"cmd": "lsmod", "description": "List loaded kernel modules", "example": "lsmod | grep nvidia", "requires": "none"}
+    ],
+    "system_calls": ["fork", "exec", "open", "read", "write", "close", "mmap", "ioctl"],
+    "config_files": [
+      {"path": "/boot/config-*", "format": "text", "editable": false},
+      {"path": "/etc/sysctl.conf", "format": "key=value", "editable": true}
+    ]
+  },
+  "cs_concepts": {
+    "category": ["Operating Systems", "Computer Architecture"],
+    "topics": ["Kernel design", "Monolithic vs Microkernel", "System calls", "Interrupt handling"],
+    "difficulty": "advanced"
+  },
+  "performance": {
+    "metrics": {
+      "context_switches": "O(1) with CFS scheduler",
+      "system_call_overhead": "~100-200 nanoseconds",
+      "interrupt_latency": "< 10 microseconds"
+    },
+    "bottlenecks": ["Lock contention", "Cache misses", "TLB flushes"],
+    "tuning": ["CPU affinity", "Kernel parameters", "Module configuration"]
+  },
+  "children": [
+    {
+      "id": "process_mgmt",
+      "name": "Process Management",
+      "type": "kernel",
+      "level": "intermediate",
+      "metadata": {
+        "description": "Manages process lifecycle, scheduling, and resource allocation. Implements the CFS (Completely Fair Scheduler).",
+        "path": "/kernel/sched/",
+        "created_by": "Ingo Molnar (CFS, 2007)",
+        "managed_by": "scheduler subsystem maintainers"
+      },
+      "connections": {
+        "reads_from": ["/proc/*/stat", "cpu_runqueues"],
+        "writes_to": ["/proc/loadavg", "/proc/schedstat"],
+        "controls": ["task_struct", "runqueues", "cpu_time"],
+        "controlled_by": ["nice", "renice", "taskset", "cgroups"]
+      },
+      "operations": {
+        "commands": [
+          {"cmd": "ps aux", "description": "List all processes", "example": "ps aux | grep apache", "requires": "none"},
+          {"cmd": "top -H", "description": "Show threads", "example": "top -H -p 1234", "requires": "none"},
+          {"cmd": "pidstat 1", "description": "Process statistics", "example": "pidstat -u -p 1234 1", "requires": "sysstat"},
+          {"cmd": "schedtool", "description": "Query/set scheduling parameters", "example": "schedtool -B PID", "requires": "schedtool"}
+        ],
+        "system_calls": ["fork", "vfork", "clone", "execve", "wait", "exit", "kill", "setpriority"],
+        "config_files": [
+          {"path": "/proc/sys/kernel/sched_*", "format": "integer", "editable": true},
+          {"path": "/sys/fs/cgroup/cpu/", "format": "cgroup", "editable": true}
+        ]
+      },
+      "cs_concepts": {
+        "category": ["Operating Systems", "Algorithms"],
+        "topics": ["Scheduling algorithms", "Red-black trees", "O(log n) complexity", "Fair queuing"],
+        "difficulty": "intermediate"
+      },
+      "performance": {
+        "metrics": {
+          "scheduler_complexity": "O(log n) for CFS",
+          "context_switch_time": "2-5 microseconds",
+          "load_balancing": "Every 4ms between cores"
+        },
+        "bottlenecks": ["Run queue contention", "Cache thrashing", "NUMA effects"],
+        "tuning": ["sched_migration_cost", "sched_latency_ns", "CPU affinity"]
+      },
+      "children": [
+        {
+          "id": "cfs_scheduler",
+          "name": "CFS Scheduler",
+          "type": "kernel",
+          "level": "advanced",
+          "metadata": {
+            "description": "Completely Fair Scheduler using red-black trees for O(log n) scheduling decisions.",
+            "path": "/kernel/sched/fair.c",
+            "created_by": "Ingo Molnar",
+            "managed_by": "scheduler maintainers"
+          },
+          "cs_concepts": {
+            "category": ["Data Structures", "Algorithms"],
+            "topics": ["Red-black trees", "Virtual runtime", "Time complexity O(log n)"],
+            "difficulty": "advanced"
+          },
+          "examples": [
+            {
+              "title": "View scheduler statistics",
+              "code": "cat /proc/sched_debug",
+              "explanation": "Shows CFS runqueue information and task scheduling details"
+            },
+            {
+              "title": "Set CPU affinity",
+              "code": "taskset -c 0,1 ./myprogram",
+              "explanation": "Bind process to CPU cores 0 and 1"
+            }
+          ]
+        },
+        {
+          "id": "process_states",
+          "name": "Process States",
+          "type": "kernel",
+          "level": "beginner",
+          "metadata": {
+            "description": "TASK_RUNNING, TASK_INTERRUPTIBLE, TASK_UNINTERRUPTIBLE, TASK_STOPPED, TASK_ZOMBIE states.",
+            "path": "include/linux/sched.h"
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "ps aux | awk '{print $8}' | sort | uniq -c", "description": "Count processes by state"},
+              {"cmd": "kill -STOP PID", "description": "Stop a process"},
+              {"cmd": "kill -CONT PID", "description": "Continue a stopped process"}
+            ]
+          },
+          "cs_concepts": {
+            "category": ["Operating Systems"],
+            "topics": ["State machines", "Process lifecycle", "Signal handling"],
+            "difficulty": "beginner"
+          }
+        },
+        {
+          "id": "priority_nice",
+          "name": "Priority and Nice Values",
+          "type": "kernel",
+          "level": "intermediate",
+          "metadata": {
+            "description": "Process priority system from -20 (highest) to 19 (lowest) priority.",
+            "path": "/proc/*/stat"
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "nice -n 10 command", "description": "Start with lower priority"},
+              {"cmd": "renice -n -5 -p PID", "description": "Change running process priority", "requires": "root for negative"},
+              {"cmd": "ionice -c3 command", "description": "Set I/O scheduling class to idle"}
+            ]
+          },
+          "performance": {
+            "metrics": {
+              "nice_impact": "Each nice level ~10% CPU difference",
+              "priority_range": "-20 to 19 (40 levels)",
+              "default_nice": "0"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "memory_mgmt",
+      "name": "Memory Management",
+      "type": "kernel",
+      "level": "advanced",
+      "metadata": {
+        "description": "Virtual memory system with paging, segmentation, and memory protection. Implements demand paging and copy-on-write.",
+        "path": "/mm/",
+        "created_by": "Linux MM developers",
+        "managed_by": "Andrew Morton, MM maintainers"
+      },
+      "connections": {
+        "reads_from": ["page_tables", "TLB", "RAM"],
+        "writes_to": ["swap", "/proc/meminfo", "page_cache"],
+        "controls": ["virtual_memory", "physical_memory", "swap_space"],
+        "controlled_by": ["mmap", "malloc", "OOM_killer"]
+      },
+      "operations": {
+        "commands": [
+          {"cmd": "free -h", "description": "Human-readable memory usage"},
+          {"cmd": "vmstat 1", "description": "Virtual memory statistics"},
+          {"cmd": "pmap PID", "description": "Process memory map"},
+          {"cmd": "slabtop", "description": "Kernel slab allocator statistics", "requires": "root"}
+        ],
+        "system_calls": ["mmap", "munmap", "brk", "mprotect", "mlock", "mincore"],
+        "config_files": [
+          {"path": "/proc/sys/vm/*", "format": "various", "editable": true},
+          {"path": "/etc/fstab", "format": "fstab", "editable": true}
+        ]
+      },
+      "cs_concepts": {
+        "category": ["Operating Systems", "Computer Architecture"],
+        "topics": ["Virtual memory", "Page tables", "TLB", "Memory hierarchy", "NUMA"],
+        "difficulty": "advanced"
+      },
+      "performance": {
+        "metrics": {
+          "page_size": "4KB default, 2MB/1GB huge pages",
+          "TLB_miss_cost": "~100 cycles",
+          "page_fault_cost": "Minor: ~1000 cycles, Major: ~1ms"
+        },
+        "bottlenecks": ["Page faults", "TLB misses", "Memory fragmentation", "NUMA distance"],
+        "tuning": ["Huge pages", "vm.swappiness", "NUMA balancing"]
+      },
+      "children": [
+        {
+          "id": "virtual_memory",
+          "name": "Virtual Memory",
+          "type": "kernel",
+          "level": "advanced",
+          "metadata": {
+            "description": "48-bit virtual address space on x86_64, page table walking, and address translation.",
+            "path": "/arch/x86/mm/"
+          },
+          "cs_concepts": {
+            "category": ["Computer Architecture"],
+            "topics": ["4-level page tables", "Address translation", "TLB", "Page walks"],
+            "difficulty": "advanced"
+          },
+          "examples": [
+            {
+              "title": "View process memory map",
+              "code": "cat /proc/PID/maps",
+              "explanation": "Shows virtual memory regions of a process"
+            }
+          ]
+        },
+        {
+          "id": "page_cache",
+          "name": "Page Cache",
+          "type": "kernel",
+          "level": "intermediate",
+          "metadata": {
+            "description": "Caches file data in RAM for faster access, uses LRU for eviction.",
+            "path": "/mm/filemap.c"
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "echo 3 > /proc/sys/vm/drop_caches", "description": "Drop page cache", "requires": "root"},
+              {"cmd": "fincore FILE", "description": "Check if file is in cache"},
+              {"cmd": "vmtouch FILE", "description": "Control file cache state"}
+            ]
+          },
+          "cs_concepts": {
+            "category": ["Algorithms", "Data Structures"],
+            "topics": ["LRU algorithm", "Radix trees", "Write-back cache"],
+            "difficulty": "intermediate"
+          }
+        },
+        {
+          "id": "memory_allocators",
+          "name": "Memory Allocators",
+          "type": "kernel",
+          "level": "advanced",
+          "metadata": {
+            "description": "SLAB, SLUB, and SLOB allocators for kernel objects. Buddy allocator for pages.",
+            "path": "/mm/sl[auo]b.c"
+          },
+          "cs_concepts": {
+            "category": ["Algorithms", "Data Structures"],
+            "topics": ["Buddy system", "Slab allocation", "Memory pools", "Fragmentation"],
+            "difficulty": "advanced"
+          },
+          "performance": {
+            "metrics": {
+              "slab_allocation": "O(1) for common sizes",
+              "buddy_allocation": "O(log n) for page allocation"
+            }
+          }
+        },
+        {
+          "id": "oom_killer",
+          "name": "OOM Killer",
+          "type": "kernel",
+          "level": "intermediate",
+          "metadata": {
+            "description": "Out of Memory killer selects and terminates processes when memory is exhausted.",
+            "path": "/mm/oom_kill.c"
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "echo -1000 > /proc/PID/oom_score_adj", "description": "Protect from OOM killer", "requires": "root"},
+              {"cmd": "cat /proc/PID/oom_score", "description": "View OOM score"}
+            ]
+          },
+          "cs_concepts": {
+            "category": ["Operating Systems"],
+            "topics": ["Resource management", "Process selection algorithms"],
+            "difficulty": "intermediate"
+          }
+        }
+      ]
+    },
+    {
+      "id": "io_subsystem",
+      "name": "I/O Subsystem",
+      "type": "kernel",
+      "level": "advanced",
+      "metadata": {
+        "description": "Input/Output stack including block layer, device drivers, and filesystem interface.",
+        "path": "/block/, /drivers/",
+        "created_by": "Jens Axboe (block layer)",
+        "managed_by": "Block and driver maintainers"
+      },
+      "connections": {
+        "reads_from": ["devices", "DMA", "interrupts"],
+        "writes_to": ["block_devices", "char_devices", "network_devices"],
+        "controls": ["io_scheduler", "device_drivers", "DMA_operations"],
+        "controlled_by": ["ioctl", "read", "write", "mmap"]
+      },
+      "operations": {
+        "commands": [
+          {"cmd": "iostat -x 1", "description": "Extended I/O statistics"},
+          {"cmd": "iotop -o", "description": "I/O usage by process", "requires": "root"},
+          {"cmd": "blktrace /dev/sda", "description": "Block layer tracing", "requires": "root"},
+          {"cmd": "hdparm -tT /dev/sda", "description": "Disk performance test"}
+        ],
+        "system_calls": ["read", "write", "open", "close", "ioctl", "sendfile", "splice"],
+        "config_files": [
+          {"path": "/sys/block/*/queue/scheduler", "format": "text", "editable": true},
+          {"path": "/proc/sys/vm/dirty_*", "format": "integer", "editable": true}
+        ]
+      },
+      "cs_concepts": {
+        "category": ["Operating Systems", "Computer Architecture"],
+        "topics": ["I/O scheduling", "DMA", "Interrupts", "Device drivers", "Buffering"],
+        "difficulty": "advanced"
+      },
+      "performance": {
+        "metrics": {
+          "throughput": "NVMe: >3GB/s, SATA SSD: ~500MB/s, HDD: ~150MB/s",
+          "latency": "NVMe: <100μs, SSD: <1ms, HDD: ~10ms",
+          "IOPS": "NVMe: >500K, SSD: ~100K, HDD: ~200"
+        },
+        "bottlenecks": ["Queue depth", "I/O scheduler", "Filesystem overhead"],
+        "tuning": ["I/O scheduler selection", "Queue parameters", "Read-ahead"]
+      },
+      "children": [
+        {
+          "id": "block_layer",
+          "name": "Block Layer",
+          "type": "kernel",
+          "level": "advanced",
+          "metadata": {
+            "description": "Generic block layer handling requests, queuing, and I/O scheduling.",
+            "path": "/block/"
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "cat /sys/block/sda/queue/scheduler", "description": "View I/O scheduler"},
+              {"cmd": "echo noop > /sys/block/sda/queue/scheduler", "description": "Change I/O scheduler", "requires": "root"}
+            ]
+          },
+          "cs_concepts": {
+            "category": ["Algorithms"],
+            "topics": ["Elevator algorithms", "Request merging", "Queue management"],
+            "difficulty": "advanced"
+          }
+        },
+        {
+          "id": "vfs_layer",
+          "name": "VFS Layer",
+          "type": "kernel",
+          "level": "advanced",
+          "metadata": {
+            "description": "Virtual File System providing unified interface to different filesystems.",
+            "path": "/fs/"
+          },
+          "cs_concepts": {
+            "category": ["Operating Systems", "Design Patterns"],
+            "topics": ["Abstraction layer", "Inode structure", "Dentry cache", "File operations"],
+            "difficulty": "advanced"
+          },
+          "examples": [
+            {
+              "title": "List supported filesystems",
+              "code": "cat /proc/filesystems",
+              "explanation": "Shows all filesystem types the kernel can handle"
+            }
+          ]
+        },
+        {
+          "id": "device_drivers",
+          "name": "Device Drivers",
+          "type": "kernel",
+          "level": "advanced",
+          "metadata": {
+            "description": "Kernel modules interfacing with hardware devices.",
+            "path": "/drivers/"
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "lsmod", "description": "List loaded modules"},
+              {"cmd": "modinfo module_name", "description": "Module information"},
+              {"cmd": "insmod module.ko", "description": "Insert module", "requires": "root"},
+              {"cmd": "rmmod module_name", "description": "Remove module", "requires": "root"}
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "ipc_mechanisms",
+      "name": "IPC Mechanisms",
+      "type": "kernel",
+      "level": "intermediate",
+      "metadata": {
+        "description": "Inter-Process Communication methods for data exchange between processes.",
+        "path": "/ipc/",
+        "created_by": "Various contributors",
+        "managed_by": "IPC maintainers"
+      },
+      "connections": {
+        "reads_from": ["process_memory", "kernel_buffers"],
+        "writes_to": ["shared_memory", "message_queues", "pipes"],
+        "controls": ["data_transfer", "synchronization"],
+        "controlled_by": ["permissions", "limits", "namespaces"]
+      },
+      "operations": {
+        "commands": [
+          {"cmd": "ipcs", "description": "Show IPC facilities"},
+          {"cmd": "lsof | grep PIPE", "description": "Show pipe usage"},
+          {"cmd": "ss -x", "description": "Show Unix domain sockets"}
+        ],
+        "system_calls": ["pipe", "mkfifo", "msgget", "semget", "shmget", "socket"],
+        "config_files": [
+          {"path": "/proc/sys/kernel/msg*", "format": "integer", "editable": true},
+          {"path": "/proc/sys/kernel/shm*", "format": "integer", "editable": true}
+        ]
+      },
+      "cs_concepts": {
+        "category": ["Operating Systems", "Distributed Systems"],
+        "topics": ["Message passing", "Shared memory", "Synchronization", "Producer-consumer"],
+        "difficulty": "intermediate"
+      },
+      "children": [
+        {
+          "id": "pipes_fifos",
+          "name": "Pipes and FIFOs",
+          "type": "kernel",
+          "level": "beginner",
+          "metadata": {
+            "description": "Unidirectional data channels for process communication.",
+            "path": "/fs/pipe.c"
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "mkfifo /tmp/myfifo", "description": "Create named pipe"},
+              {"cmd": "command1 | command2", "description": "Anonymous pipe"}
+            ]
+          },
+          "cs_concepts": {
+            "category": ["Operating Systems"],
+            "topics": ["Buffering", "Producer-consumer problem", "Stream processing"],
+            "difficulty": "beginner"
+          }
+        },
+        {
+          "id": "unix_sockets",
+          "name": "Unix Domain Sockets",
+          "type": "kernel",
+          "level": "intermediate",
+          "metadata": {
+            "description": "High-performance local IPC using socket interface.",
+            "path": "/net/unix/"
+          },
+          "performance": {
+            "metrics": {
+              "throughput": ">10GB/s local",
+              "latency": "<1 microsecond"
+            }
+          }
+        },
+        {
+          "id": "shared_memory",
+          "name": "Shared Memory",
+          "type": "kernel",
+          "level": "intermediate",
+          "metadata": {
+            "description": "Memory regions accessible by multiple processes.",
+            "path": "/ipc/shm.c"
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "ipcs -m", "description": "Show shared memory segments"},
+              {"cmd": "ipcrm -m shmid", "description": "Remove shared memory", "requires": "owner or root"}
+            ]
+          },
+          "cs_concepts": {
+            "category": ["Operating Systems", "Parallel Computing"],
+            "topics": ["Memory mapping", "Synchronization", "Cache coherence"],
+            "difficulty": "intermediate"
+          }
+        },
+        {
+          "id": "signals",
+          "name": "Signals",
+          "type": "kernel",
+          "level": "intermediate",
+          "metadata": {
+            "description": "Asynchronous notifications sent to processes.",
+            "path": "/kernel/signal.c"
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "kill -l", "description": "List all signals"},
+              {"cmd": "kill -TERM PID", "description": "Send SIGTERM"},
+              {"cmd": "trap 'echo caught' SIGINT", "description": "Handle signal in shell"}
+            ]
+          },
+          "cs_concepts": {
+            "category": ["Operating Systems"],
+            "topics": ["Asynchronous events", "Signal handlers", "Signal masks"],
+            "difficulty": "intermediate"
+          }
+        }
+      ]
+    },
+    {
+      "id": "security",
+      "name": "Security Subsystems",
+      "type": "kernel",
+      "level": "advanced",
+      "metadata": {
+        "description": "Linux Security Modules (LSM), capabilities, and access control.",
+        "path": "/security/",
+        "created_by": "Various security developers",
+        "managed_by": "James Morris, security maintainers"
+      },
+      "connections": {
+        "controls": ["file_permissions", "process_capabilities", "network_access"],
+        "controlled_by": ["SELinux", "AppArmor", "seccomp"]
+      },
+      "operations": {
+        "commands": [
+          {"cmd": "getcap /usr/bin/ping", "description": "Show file capabilities"},
+          {"cmd": "aa-status", "description": "AppArmor status", "requires": "AppArmor"},
+          {"cmd": "sestatus", "description": "SELinux status", "requires": "SELinux"}
+        ],
+        "system_calls": ["capget", "capset", "setuid", "setgid", "seccomp"],
+        "config_files": [
+          {"path": "/etc/security/", "format": "various", "editable": true},
+          {"path": "/etc/selinux/config", "format": "key=value", "editable": true}
+        ]
+      },
+      "cs_concepts": {
+        "category": ["Security", "Operating Systems"],
+        "topics": ["Access control", "MAC vs DAC", "Capabilities", "Sandboxing"],
+        "difficulty": "advanced"
+      },
+      "children": [
+        {
+          "id": "capabilities",
+          "name": "Linux Capabilities",
+          "type": "kernel",
+          "level": "advanced",
+          "metadata": {
+            "description": "Fine-grained privileges replacing traditional root/non-root binary.",
+            "path": "/kernel/capability.c"
+          },
+          "examples": [
+            {
+              "title": "Grant network capability",
+              "code": "setcap cap_net_raw+ep /path/to/program",
+              "explanation": "Allow program to use raw sockets without root"
+            }
+          ]
+        },
+        {
+          "id": "namespaces",
+          "name": "Namespaces",
+          "type": "kernel",
+          "level": "advanced",
+          "metadata": {
+            "description": "Isolation mechanism for containers (PID, network, mount, etc.).",
+            "path": "/kernel/nsproxy.c"
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "unshare --fork --pid --mount-proc", "description": "Create new namespace"},
+              {"cmd": "nsenter -t PID -n", "description": "Enter network namespace"}
+            ]
+          },
+          "cs_concepts": {
+            "category": ["Operating Systems", "Virtualization"],
+            "topics": ["Resource isolation", "Container technology", "Virtualization"],
+            "difficulty": "advanced"
+          }
+        },
+        {
+          "id": "cgroups",
+          "name": "Control Groups",
+          "type": "kernel",
+          "level": "advanced",
+          "metadata": {
+            "description": "Resource limitation, prioritization, accounting, and control.",
+            "path": "/kernel/cgroup/"
+          },
+          "operations": {
+            "commands": [
+              {"cmd": "systemd-cgls", "description": "Show cgroup tree"},
+              {"cmd": "cgcreate -g cpu:/mygroup", "description": "Create cgroup", "requires": "root"}
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
