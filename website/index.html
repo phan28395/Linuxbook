@@ -1718,105 +1718,50 @@
                             { cmd: "echo $SHELL", desc: "Show current shell" },
                             { cmd: "chsh -s /bin/zsh", desc: "Change default shell" }
                         ],
-                        files: ["~/.bashrc", "~/.zshrc", "/etc/shells"],
+                        files: ["~/.bashrc", "~/.zshrc", "/etc/shells"]
+                    },
+                    {
+                        name: "System Libraries",
+                        type: "userspace",
+                        description: "Shared libraries that provide common functionality to programs.",
+                        files: ["/lib/", "/usr/lib/", "/etc/ld.so.conf"]
+                    },
+                    {
+                        name: "Applications",
+                        type: "userspace",
+                        description: "User programs and utilities that perform specific tasks.",
+                        files: ["/usr/bin/", "/bin/"]
+                    }
+                ]
+            };
+        }
+
+        // Fallback: Load embedded minimal data if JSON fails
+        function loadEmbeddedData() {
+            const treeRoot = document.getElementById('tree-root');
+            treeRoot.innerHTML = '';
+            
+            // Minimal embedded data structure
+            linuxSystemData = {
+                name: "Linux System",
+                type: "root",
+                children: [
+                    {
+                        name: "Kernel Space",
+                        type: "kernel",
+                        description: "The core of the Linux operating system.",
                         children: [
-                                {
-                                    name: "Scheduler (CFS)",
-                                    type: "kernel",
-                                    description: "Completely Fair Scheduler - O(log n) scheduling algorithm using red-black trees.",
-                                    files: ["/proc/sched_debug", "/sys/kernel/debug/sched_features"]
-                                },
-                                {
-                                    name: "Process States",
-                                    type: "kernel",
-                                    description: "Running, Sleeping, Stopped, Zombie states and transitions.",
-                                    commands: [
-                                        { cmd: "ps aux | grep Z", desc: "Find zombie processes" }
-                                    ]
-                                },
-                                {
-                                    name: "CPU Affinity",
-                                    type: "kernel",
-                                    description: "Binding processes to specific CPU cores for performance optimization.",
-                                    commands: [
-                                        { cmd: "taskset -c 0,1 command", desc: "Run on cores 0 and 1" },
-                                        { cmd: "taskset -p pid", desc: "Check process affinity" }
-                                    ]
-                                }
-                            ]
-                        },
-                        {
-                            name: "Memory Management",
-                            type: "kernel",
-                            description: "Virtual memory system, page tables, memory allocation, and swapping.",
-                            commands: [
-                                { cmd: "free -h", desc: "Display memory usage" },
-                                { cmd: "vmstat 1", desc: "Virtual memory statistics" },
-                                { cmd: "cat /proc/meminfo", desc: "Detailed memory information" }
-                            ],
-                            files: ["/proc/meminfo", "/proc/vmstat", "/proc/sys/vm/"],
-                            children: [
-                                {
-                                    name: "Virtual Memory",
-                                    type: "kernel",
-                                    description: "Address space isolation and memory protection through page tables.",
-                                    files: ["/proc/*/maps", "/proc/*/smaps"]
-                                },
-                                {
-                                    name: "Page Cache",
-                                    type: "kernel",
-                                    description: "Caches file data in RAM for faster access.",
-                                    commands: [
-                                        { cmd: "echo 3 > /proc/sys/vm/drop_caches", desc: "Clear page cache" }
-                                    ]
-                                },
-                                {
-                                    name: "OOM Killer",
-                                    type: "kernel",
-                                    description: "Out of Memory killer - terminates processes when system runs out of memory.",
-                                    files: ["/proc/sys/vm/oom_kill_allocating_task", "/proc/*/oom_score"]
-                                }
-                            ]
-                        },
-                        {
-                            name: "I/O Subsystem",
-                            type: "kernel",
-                            description: "Manages input/output operations, device drivers, and filesystem access.",
-                            commands: [
-                                { cmd: "iostat -x 1", desc: "I/O statistics" },
-                                { cmd: "iotop", desc: "I/O usage by process" }
-                            ],
-                            children: [
-                                {
-                                    name: "Block Layer",
-                                    type: "kernel",
-                                    description: "Manages block devices like hard drives and SSDs.",
-                                    files: ["/sys/block/", "/proc/diskstats"]
-                                },
-                                {
-                                    name: "VFS Layer",
-                                    type: "kernel",
-                                    description: "Virtual File System - abstraction layer for different filesystems.",
-                                    files: ["/proc/filesystems", "/proc/mounts"]
-                                },
-                                {
-                                    name: "Device Drivers",
-                                    type: "kernel",
-                                    description: "Kernel modules that interface with hardware devices.",
-                                    commands: [
-                                        { cmd: "lsmod", desc: "List loaded kernel modules" },
-                                        { cmd: "modprobe module_name", desc: "Load kernel module" }
-                                    ]
-                                }
-                            ]
-                        }
-                    ]
-                },
-                {
-                    name: "Filesystem",
-                    type: "filesystem",
-                    description: "Hierarchical file organization following the Filesystem Hierarchy Standard (FHS).",
-                    children: [
+                            { name: "Process Management", type: "kernel", description: "Manages processes and scheduling." },
+                            { name: "Memory Management", type: "kernel", description: "Virtual memory and allocation." },
+                            { name: "I/O Subsystem", type: "kernel", description: "Input/output and device drivers." }
+                        ]
+                    },
+                    createUserSpaceNode(),
+                    {
+                        name: "Filesystem",
+                        type: "filesystem",
+                        description: "Hierarchical file organization following the Filesystem Hierarchy Standard (FHS).",
+                        children: [
                         {
                             name: "/bin",
                             type: "filesystem",
@@ -2098,60 +2043,9 @@
                         }
                     ]
                 }
-            };
-        }
-
-        // Fallback: Load embedded minimal data if JSON fails
-        function loadEmbeddedData() {
-            const treeRoot = document.getElementById('tree-root');
-            treeRoot.innerHTML = '';
-            
-            // Minimal embedded data structure
-            linuxSystemData = {
-                name: "Linux System",
-                type: "root",
-                children: [
-                    {
-                        name: "Kernel Space",
-                        type: "kernel",
-                        description: "The core of the Linux operating system.",
-                        children: [
-                            { name: "Process Management", type: "kernel", description: "Manages processes and scheduling." },
-                            { name: "Memory Management", type: "kernel", description: "Virtual memory and allocation." },
-                            { name: "I/O Subsystem", type: "kernel", description: "Input/output and device drivers." }
-                        ]
-                    },
-                    createUserSpaceNode(),
-                    {
-                        name: "Filesystem",
-                        type: "filesystem",
-                        description: "Linux filesystem hierarchy.",
-                        children: [
-                            { name: "/bin", type: "filesystem", description: "Essential command binaries." },
-                            { name: "/etc", type: "filesystem", description: "System configuration files." },
-                            { name: "/home", type: "filesystem", description: "User home directories." }
-                        ]
-                    },
-                    {
-                        name: "Networking",
-                        type: "network",
-                        description: "TCP/IP networking stack.",
-                        children: [
-                            { name: "TCP/IP Stack", type: "network", description: "Network protocol layers." },
-                            { name: "Network Interfaces", type: "network", description: "Network adapters and configuration." }
-                        ]
-                    },
-                    {
-                        name: "System Services",
-                        type: "service",
-                        description: "System daemons and services.",
-                        children: [
-                            { name: "systemd", type: "service", description: "System and service manager." },
-                            { name: "SSH", type: "service", description: "Secure shell service." }
-                        ]
-                    }
-                ]
-            };
+            ]
+        };
+        
             
             // Build tree with embedded data
             linuxSystemData.children.forEach(child => {
